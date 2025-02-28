@@ -25,4 +25,4 @@ Like common web browsers, data made available via W3C standards for HTML, CSS, &
 
 ## Cached Data
 
-To improve performance, the app may cache website content, metadata, and other cookies. All of this data is stored locally on the device and can be viewed and deleted in the app under Settings->Privacy->Data Management.
+To improve performance, the app may cache website content, metadata, and other cookies. All of this data is locally stored on the device. It will be deleted when the app removed from the device.
