@@ -1,2 +1,2 @@
-# iQ3ConnectXRViewer
+# iQ3Connect XR Viewer
 iQ3Connect XR Viewer is an augmented reality (AR) viewer for iOS that lets you run AR experiences built with web technologies that use webXR. This project is forked from Mozilla's WebXR Viewer. 
