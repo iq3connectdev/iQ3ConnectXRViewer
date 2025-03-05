@@ -5,7 +5,7 @@ iQ3Connect XR Viewer is an augmented reality (AR) viewer that lets you create an
 
 ## Data Sources and Usage
 
-iQ3Connect XR Viewer exposes a number of AR related sensors to web-based AR applications including audio, video, motion tracking and scene geometry data. XR Browser will always ask before activating and sharing any sensor data, but always be cautious when visiting untrusted websites. The following section describes data and its usage within XR Browser.
+iQ3Connect XR Viewer exposes a number of AR related sensors to web-based AR applications including audio, video, motion tracking and scene geometry data. iQ3Connect XR Viewer will always ask before activating and sharing any sensor data, but always be cautious when visiting untrusted websites. The following section describes data and its usage within iQ3Connect XR Viewer.
 
 **Location data**: iQ3Connect XR Viewer always asks before determining and sharing your location with a requesting website (for example, if a map website needs your location to provide directions). To determine location, it may use your operating system’s geolocation features, Wi-fi networks, cell phone towers, or IP address, and may send this data to Google's geolocation service, which has its own  [privacy policy](https://www.google.com/privacy/lsf.html). iQ3Connect XR Viewer also combines macro-level localization with more precise positioning from AR Kit’s motion tracking API. This data is used to support multi-user persistent AR sessions across devices.
 
