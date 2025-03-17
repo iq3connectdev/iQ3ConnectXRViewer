@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.XIB" version="3.0" toolsVersion="23504" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES">
+    <device id="retina4_7" orientation="portrait" appearance="light"/>
+    <dependencies>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="23506"/>
+        <capability name="Safe area layout guides" minToolsVersion="9.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <objects>
+        <placeholder placeholderIdentifier="IBFilesOwner" id="-1" userLabel="File's Owner"/>
+        <placeholder placeholderIdentifier="IBFirstResponder" id="-2" customClass="UIResponder"/>
+        <view contentMode="scaleToFill" id="iN0-l3-epB" customClass="BarView" customModule="iQ3ConnectXRViewer" customModuleProvider="target">
+            <rect key="frame" x="0.0" y="0.0" width="375" height="50"/>
+            <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+            <subviews>
+                <view alpha="0.90000000000000002" contentMode="scaleToFill" translatesAutoresizingMaskIntoConstraints="NO" id="1LK-v0-sqL" userLabel="backView">
+                    <rect key="frame" x="0.0" y="0.0" width="375" height="50"/>
+                    <color key="backgroundColor" red="0.89898989898989901" green="0.89898989898989901" blue="0.89898989898989901" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                </view>
+                <stackView opaque="NO" contentMode="scaleToFill" distribution="fillProportionally" alignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="qHr-Ni-uhX">
+                    <rect key="frame" x="0.0" y="10" width="375" height="40"/>
+                    <subviews>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="mqO-Dv-xI4">
+                            <rect key="frame" x="0.0" y="9" width="31.5" height="22"/>
+                            <constraints>
+                                <constraint firstAttribute="width" constant="31.5" id="ue3-GG-9cf"/>
+                            </constraints>
+                            <state key="normal" image="backSelected"/>
+                            <connections>
+                                <action selector="backAction:" destination="iN0-l3-epB" eventType="touchDown" id="yZ3-L0-dss"/>
+                            </connections>
+                        </button>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="Feq-Eq-O9v">
+                            <rect key="frame" x="31.5" y="9" width="31.5" height="22"/>
+                            <state key="normal" image="forwardSelected"/>
+                            <connections>
+                                <action selector="forwardAction:" destination="iN0-l3-epB" eventType="touchDown" id="5l8-zq-29a"/>
+                            </connections>
+                        </button>
+                        <textField opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="left" contentVerticalAlignment="center" borderStyle="roundedRect" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="T5z-0b-MVG" customClass="URLTextField">
+                            <rect key="frame" x="63" y="5.5" width="192" height="29.5"/>
+                            <color key="backgroundColor" red="0.73232325219144723" green="0.73232325219144723" blue="0.73232325219144723" alpha="1" colorSpace="custom" customColorSpace="displayP3"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="29.5" id="JiL-UK-7MC"/>
+                            </constraints>
+                            <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                            <textInputTraits key="textInputTraits" autocorrectionType="no" spellCheckingType="no" keyboardType="URL" textContentType="url"/>
+                        </textField>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="center" contentVerticalAlignment="center" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="1FE-vv-bxo" userLabel="Switch Camera Btn">
+                            <rect key="frame" x="255" y="0.0" width="40" height="40"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="40" id="UkG-je-1mY"/>
+                                <constraint firstAttribute="width" constant="40" id="h2P-8t-A1Q"/>
+                            </constraints>
+                            <inset key="imageEdgeInsets" minX="7" minY="8" maxX="5" maxY="4.5"/>
+                            <state key="normal" image="camFlip"/>
+                            <connections>
+                                <action selector="switchCameraAction:" destination="iN0-l3-epB" eventType="touchUpInside" id="heF-0T-bOr"/>
+                            </connections>
+                        </button>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="fill" contentVerticalAlignment="fill" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="eTd-Vy-1bs">
+                            <rect key="frame" x="295" y="0.0" width="40" height="40"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="40" id="O0k-SP-qAC"/>
+                                <constraint firstAttribute="width" constant="40" id="q5O-jT-1cJ"/>
+                            </constraints>
+                            <inset key="contentEdgeInsets" minX="7" minY="6" maxX="5" maxY="8"/>
+                            <state key="normal" image="home"/>
+                            <connections>
+                                <action selector="homeAction:" destination="iN0-l3-epB" eventType="touchDown" id="isa-yp-QMS"/>
+                            </connections>
+                        </button>
+                        <button opaque="NO" contentMode="scaleToFill" contentHorizontalAlignment="fill" contentVerticalAlignment="fill" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="OYK-Dm-FZm">
+                            <rect key="frame" x="335" y="0.0" width="40" height="40"/>
+                            <constraints>
+                                <constraint firstAttribute="height" constant="40" id="Zcf-4q-eWF"/>
+                                <constraint firstAttribute="width" constant="40" id="n4N-Kw-UfJ"/>
+                            </constraints>
+                            <inset key="contentEdgeInsets" minX="8" minY="8" maxX="8" maxY="8"/>
+                            <state key="normal" image="gear_settings"/>
+                            <connections>
+                                <action selector="settingsAction" destination="iN0-l3-epB" eventType="touchUpInside" id="FFB-8D-6P0"/>
+                            </connections>
+                        </button>
+                    </subviews>
+                    <constraints>
+                        <constraint firstItem="mqO-Dv-xI4" firstAttribute="width" secondItem="Feq-Eq-O9v" secondAttribute="width" id="AT1-tY-C3X"/>
+                    </constraints>
+                </stackView>
+            </subviews>
+            <viewLayoutGuide key="safeArea" id="vUN-kp-3ea"/>
+            <color key="backgroundColor" white="0.0" alpha="0.0" colorSpace="calibratedWhite"/>
+            <constraints>
+                <constraint firstAttribute="bottom" secondItem="qHr-Ni-uhX" secondAttribute="bottom" id="AeU-E3-n1J"/>
+                <constraint firstItem="1LK-v0-sqL" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="Bzp-LA-GGi"/>
+                <constraint firstItem="qHr-Ni-uhX" firstAttribute="leading" secondItem="iN0-l3-epB" secondAttribute="leading" id="OrM-pQ-CuW"/>
+                <constraint firstAttribute="trailing" secondItem="qHr-Ni-uhX" secondAttribute="trailing" id="UMx-R7-eOE"/>
+                <constraint firstAttribute="trailing" secondItem="1LK-v0-sqL" secondAttribute="trailing" id="cJc-g7-xXV"/>
+                <constraint firstAttribute="bottom" secondItem="1LK-v0-sqL" secondAttribute="bottom" id="hns-XJ-IsD"/>
+                <constraint firstItem="1LK-v0-sqL" firstAttribute="top" secondItem="iN0-l3-epB" secondAttribute="top" id="qGi-E5-hv3"/>
+            </constraints>
+            <freeformSimulatedSizeMetrics key="simulatedDestinationMetrics"/>
+            <connections>
+                <outlet property="backBtn" destination="mqO-Dv-xI4" id="9XM-SO-666"/>
+                <outlet property="forwardBtn" destination="Feq-Eq-O9v" id="PZu-iD-Ele"/>
+                <outlet property="homeBtn" destination="eTd-Vy-1bs" id="wln-Fj-oBZ"/>
+                <outlet property="settingsBtn" destination="OYK-Dm-FZm" id="0vg-mf-1R7"/>
+                <outlet property="switchCameraBtn" destination="1FE-vv-bxo" id="LkK-GO-LPS"/>
+                <outlet property="urlField" destination="T5z-0b-MVG" id="mck-MR-ueM"/>
+            </connections>
+            <point key="canvasLocation" x="24.5" y="53"/>
+        </view>
+    </objects>
+    <resources>
+        <image name="backSelected" width="10" height="18"/>
+        <image name="camFlip" width="56" height="56"/>
+        <image name="forwardSelected" width="10" height="18"/>
+        <image name="gear_settings" width="56" height="56"/>
+        <image name="home" width="56" height="56"/>
+    </resources>
+</document>

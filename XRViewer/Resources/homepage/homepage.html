@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebXR Browser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: linear-gradient(#ffffff, #0a6198, #1c1f4a);
+            min-height: 100vh;
+            align-items: center;
+            justify-content: center;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .logo {
+            width: 2.5rem;
+            height: 2.5rem;
+            margin-bottom: 0.75rem;
+            border-radius: 20px;
+        }
+
+        .title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #000034;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            gap: 2rem;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .card-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .card {
+            background: #ffffff;
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 16px; /* Ensures rounded corners */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.5);
+            background: linear-gradient(135deg, #60a5fa, #1e3a8a);
+        }
+
+        .card img {
+            height: 100%;
+            object-fit: contain;
+            border-radius: 16px; /* Optional: If logos also need a soft rounded feel */
+        }
+
+        .card-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #ffffff;
+            margin-top: 8px;
+        }
+
+    .card-description {
+        color: #dbeafe; /* Soft blue for better contrast */
+        font-size: 0.9rem;
+    }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="logo.png" alt="Logo" class="logo">
+        <h5 class="title">iQ3Connect XR Viewer</h5>
+    </div>
+
+<div class="grid">
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://qa.iq3connect.com:4499/api/meeting-template/public-launch?id=67c6bcd28e0ee524c8553110')">
+            <img src="logo.png" alt="Mozilla WebXR">
+        </div>
+        <p class="card-title">iQ3Connect</p>
+    </div>
+
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://www.google.com')">
+            <img src="google.png" alt="google">
+        </div>
+        <p class="card-title">Google</p>
+    </div>
+
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://mozilla.github.io/aframe-xr/examples/ar/hit_test/')">
+            <img src="aframe.png" alt="a-frame">
+        </div>
+        <p class="card-title">WebAR Anchor</p>
+    </div>
+
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://threejs.org/examples/webxr_ar_hittest')">
+            <img src="Threejs_Icon.png" alt="Three.js AR">
+        </div>
+        <p class="card-title">Three.js AR Hit Test</p>
+    </div>
+</div>
+
+
+
+    <script>
+        function navigateTo(url) {
+            window.webkit.messageHandlers.loadWebpageContentFromURL.postMessage({ url: url });
+        }
+    </script>
+</body>
+</html>

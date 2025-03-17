@@ -1,0 +1,69 @@
+PODS:
+  - CocoaLumberjack (3.4.2):
+    - CocoaLumberjack/Default (= 3.4.2)
+    - CocoaLumberjack/Extensions (= 3.4.2)
+  - CocoaLumberjack/Default (3.4.2)
+  - CocoaLumberjack/Extensions (3.4.2):
+    - CocoaLumberjack/Default
+  - CocoaLumberjack/Swift (3.4.2):
+    - CocoaLumberjack/Default
+  - DynamicBlurView (3.0.1)
+  - FontAwesomeKit (2.2.1):
+    - FontAwesomeKit/Core (= 2.2.1)
+    - FontAwesomeKit/FontAwesome (= 2.2.1)
+    - FontAwesomeKit/FoundationIcons (= 2.2.1)
+    - FontAwesomeKit/IonIcons (= 2.2.1)
+    - FontAwesomeKit/Material (= 2.2.1)
+    - FontAwesomeKit/Octicons (= 2.2.1)
+    - FontAwesomeKit/Zocial (= 2.2.1)
+  - FontAwesomeKit/Core (2.2.1)
+  - FontAwesomeKit/FontAwesome (2.2.1):
+    - FontAwesomeKit/Core
+  - FontAwesomeKit/FoundationIcons (2.2.1):
+    - FontAwesomeKit/Core
+  - FontAwesomeKit/IonIcons (2.2.1):
+    - FontAwesomeKit/Core
+  - FontAwesomeKit/Material (2.2.1):
+    - FontAwesomeKit/Core
+  - FontAwesomeKit/Octicons (2.2.1):
+    - FontAwesomeKit/Core
+  - FontAwesomeKit/Zocial (2.2.1):
+    - FontAwesomeKit/Core
+  - pop (1.0.12)
+  - PopupDialog (1.1.0):
+    - DynamicBlurView (~> 3.0.1)
+
+DEPENDENCIES:
+  - CocoaLumberjack
+  - CocoaLumberjack/Swift
+  - FontAwesomeKit
+  - pop
+  - PopupDialog (from `https://github.com/robomex/PopupDialog.git`, branch `wide-alerts`)
+
+SPEC REPOS:
+  trunk:
+    - CocoaLumberjack
+    - DynamicBlurView
+    - FontAwesomeKit
+    - pop
+
+EXTERNAL SOURCES:
+  PopupDialog:
+    :branch: wide-alerts
+    :git: https://github.com/robomex/PopupDialog.git
+
+CHECKOUT OPTIONS:
+  PopupDialog:
+    :commit: a6213d7e5b24a61b43f9d004d778e77cfa03d978
+    :git: https://github.com/robomex/PopupDialog.git
+
+SPEC CHECKSUMS:
+  CocoaLumberjack: db7cc9e464771f12054c22ff6947c5a58d43a0fd
+  DynamicBlurView: b1df5415f9bd31897549e5d7077e5ec120a4d636
+  FontAwesomeKit: 3614979b3dbb0ec3f7fac1bd760b91f66c31db67
+  pop: d582054913807fd11fd50bfe6a539d91c7e1a55a
+  PopupDialog: 557e191f121a5ffb6b80e4ae3551e5ace92dacb4
+
+PODFILE CHECKSUM: 73d558482c5d02b75d8d1bee6f981e6a3e3eb90b
+
+COCOAPODS: 1.16.2
