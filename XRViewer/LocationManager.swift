@@ -1,7 +1,7 @@
 import CoreLocation
 import Foundation
 import os
-import CocoaLumberjack
+//import CocoaLumberjack
 
 typealias DidUpdateLocation = (CLLocation?) -> Void
 typealias DidRequestAuth = (Bool) -> Void
@@ -29,7 +29,7 @@ class LocationManager: NSObject, CLLocationManagerDelegate {
     }
     
     deinit {
-        DDLogDebug("LocationManager dealloc")
+//        DDLogDebug("LocationManager dealloc")
     }
 
     func startUpdateLocation() {

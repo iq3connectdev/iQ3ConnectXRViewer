@@ -7,7 +7,7 @@
 //
 
 import UIKit
-import FontAwesomeKit
+//import FontAwesomeKit
 import CoreLocation
 import AVFoundation
 import Photos
@@ -24,8 +24,10 @@ class RequestPermissionsViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        style(button: buttonGPS, withImage: FAKFontAwesome.locationArrowIcon(withSize: size).image(with: CGSize(width: size, height: size)))
-        style(button: buttonCamera, withImage: FAKFontAwesome.cameraIcon(withSize: size).image(with: CGSize(width: size, height: size)))
+//        style(button: buttonGPS, withImage: FAKFontAwesome.locationArrowIcon(withSize: size).image(with: CGSize(width: size, height: size)))
+        style(button: buttonGPS, withImage: UIImage(systemName: "location.north.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: size))!)
+//        style(button: buttonCamera, withImage: FAKFontAwesome.cameraIcon(withSize: size).image(with: CGSize(width: size, height: size)))
+        style(button: buttonCamera, withImage: UIImage(systemName: "camera.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: size))!)
         
         if CLLocationManager().authorizationStatus == .authorizedWhenInUse {
 //        if CLLocationManager.authorizationStatus() == .authorizedWhenInUse {

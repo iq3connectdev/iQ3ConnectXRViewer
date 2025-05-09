@@ -1,6 +1,6 @@
-import FontAwesomeKit
+//import FontAwesomeKit
 import UIKit
-import CocoaLumberjack
+//import CocoaLumberjack
 
 let URL_FIELD_HEIGHT = 29
 
@@ -96,11 +96,11 @@ class BarView: UIView, UITextFieldDelegate {
 //        debugBtn.setImage(UIImage(named: "debugOn"), for: .selected)
 
         var error: Error?
-        let streetViewIcon = try? FAKFontAwesome.init(identifier: "fa-street-view", size: 24)
+        let streetViewIcon = UIImage(systemName: "figure.stand", withConfiguration: UIImage.SymbolConfiguration(pointSize: 24))
         if error != nil {
             print("\(error?.localizedDescription ?? "")")
         } else {
-            let streetViewImage: UIImage? = streetViewIcon?.image(with: CGSize(width: 24, height: 24))
+//            let streetViewImage: UIImage? = streetViewIcon?.image(with: CGSize(width: 24, height: 24))
 //            restartTrackingBtn.setImage(streetViewImage, for: .normal)
 //            restartTrackingBtn.tintColor = UIColor.gray
         }

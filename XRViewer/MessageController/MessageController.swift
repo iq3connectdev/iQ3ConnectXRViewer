@@ -1,6 +1,6 @@
 import UIKit
-import PopupDialog
-import CocoaLumberjack
+//import PopupDialog
+//import CocoaLumberjack
 
 enum ResetTrackingOption {
     case resetTracking
@@ -15,18 +15,17 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
     @objc var didHideMessage: (() -> Void)?
     @objc var didHideMessageByUser: (() -> Void)?
     private weak var viewController: UIViewController?
-    private weak var arPopup: PopupDialog?
     var requestXRPermissionsVC: RequestXRPermissionsViewController?
     private var webXRAuthorizationRequested: WebXRAuthorizationState = .notDetermined
     private var site: String?
-    var permissionsPopup: PopupDialog?
+    var permissionsPopup: UIAlertController?
     var forceShowPermissionsPopup = false
 
     @objc init(viewController vc: UIViewController?) {
         super.init()
         
         viewController = vc
-        setupAppearance()
+//        setupAppearance()
     }
     
     deinit {
@@ -34,286 +33,214 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
     }
     
     @objc func clean() {
-        if arPopup != nil {
-            arPopup?.dismiss(animated: false)
-            arPopup = nil
-        }
-        
-        if viewController?.presentedViewController != nil {
-            viewController?.presentedViewController?.dismiss(animated: false)
-        }
+        hideMessages()
     }
     
     func arMessageShowing() -> Bool {
-        return arPopup != nil
+        return viewController?.presentedViewController != nil
     }
     
     @objc func hideMessages() {
         viewController?.presentedViewController?.dismiss(animated: true)
     }
 
-    @objc func showMessageAboutCameraAccess(completion: @escaping (Bool) -> Void) {
-
-//        weak var blockSelf: MessageController? = self
-//        
-//        let popup = PopupDialog(
-//            title: "Camera Access Required",
-//            message: "WebXR needs camera access to provide AR features. Please enable camera access in Settings.",
-//            image: nil,
-//            buttonAlignment: .horizontal,
-//            transitionStyle: .bounceUp,
-//            preferredWidth: 340.0,
-//            tapGestureDismissal: false,
-//            panGestureDismissal: false,
-//            hideStatusBar: true
-//        )
-//
-//        let cancel = CancelButton(title: "Cancel", height: 40, dismissOnTap: true, action: {
-//            completion(false)
-//            blockSelf?.didHideMessageByUser?()
-//        })
-//
-//        let settings = DefaultButton(title: "Settings", height: 40, dismissOnTap: true, action: {
-//            if let settingsURL = URL(string: UIApplication.openSettingsURLString) {
-//                UIApplication.shared.open(settingsURL)
-//            }
-//            completion(false)
-//            blockSelf?.didHideMessageByUser?()
-//        })
-//
-//        popup.addButtons([cancel, settings])
-//        viewController?.present(popup, animated: true)
-//        didShowMessage?()
-    }
-    
     @objc func showMessageAboutWebError(_ error: Error?, withCompletion reloadCompletion: @escaping (_ reload: Bool) -> Void) {
         weak var blockSelf: MessageController? = self
-        let popup = PopupDialog(
+        
+        let alertController = UIAlertController(
             title: "Cannot Open the Page",
             message: "Please check the URL and try again",
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        let cancel = CancelButton(title: "Ok", height: 40, dismissOnTap: true, action: {
-                reloadCompletion(false)
+        let cancelAction = UIAlertAction(title: "Ok", style: .cancel) { _ in
+            reloadCompletion(false)
+            blockSelf?.didHideMessageByUser?()
+        }
 
-                blockSelf?.didHideMessageByUser?()
-            })
+        let okAction = UIAlertAction(title: "Reload", style: .default) { _ in
+            reloadCompletion(true)
+            blockSelf?.didHideMessageByUser?()
+        }
 
-        let ok = DefaultButton(title: "Reload", height: 40, dismissOnTap: true, action: {
-                reloadCompletion(true)
-
-                blockSelf?.didHideMessageByUser?()
-            })
-
-        popup.addButtons([cancel, ok])
-        viewController?.present(popup, animated: true)
+        alertController.addAction(cancelAction)
+        alertController.addAction(okAction)
+        
+        viewController?.present(alertController, animated: true)
         didShowMessage?()
     }
 
     @objc func showMessageAboutARInterruption(_ interrupt: Bool) {
-        if interrupt && arPopup == nil {
-            let popup = PopupDialog(
+        if interrupt {
+            let alertController = UIAlertController(
                 title: "AR Interruption Occurred",
                 message: "Please wait, it should be fixed automatically",
-                image: nil,
-                buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-                transitionStyle: .bounceUp,
-                preferredWidth: 340.0,
-                tapGestureDismissal: false,
-                panGestureDismissal: false,
-                hideStatusBar: true
+                preferredStyle: .alert
             )
 
-            arPopup = popup
-            viewController?.present(popup, animated: true)
+            viewController?.present(alertController, animated: true)
             didShowMessage?()
-        } else if !interrupt && arPopup != nil {
-            arPopup?.dismiss(animated: true)
-            arPopup = nil
+        } else if viewController?.presentedViewController is UIAlertController {
+            viewController?.presentedViewController?.dismiss(animated: true)
             didHideMessage?()
         }
     }
 
     @objc func showMessageAboutFailSession(withMessage message: String?, completion: @escaping () -> Void) {
         weak var blockSelf: MessageController? = self
-        let popup = PopupDialog(
+        
+        let alertController = UIAlertController(
             title: "AR Session Failed",
             message: message,
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        let ok = DefaultButton(title: "Ok", height: 40, dismissOnTap: true, action: {
-                popup.dismiss(animated: true)
-                blockSelf?.didHideMessageByUser?()
-                completion()
-            })
+        let okAction = UIAlertAction(title: "Ok", style: .default) { _ in
+            blockSelf?.didHideMessageByUser?()
+            completion()
+        }
 
-        popup.addButtons([ok])
-        viewController?.present(popup, animated: true)
+        alertController.addAction(okAction)
+        viewController?.present(alertController, animated: true)
         didShowMessage?()
     }
 
     @objc func showMessage(withTitle title: String?, message: String?, hideAfter seconds: Int) {
-        let popup = PopupDialog(
+        let alertController = UIAlertController(
             title: title,
             message: message,
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .zoomIn,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        viewController?.present(popup, animated: true)
+        viewController?.present(alertController, animated: true)
 
         DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + Double(Int64(seconds * Int(NSEC_PER_SEC))) / Double(NSEC_PER_SEC), execute: {
-            popup.dismiss(animated: true)
+            alertController.dismiss(animated: true)
         })
     }
 
     @objc func showMessageAboutMemoryWarning(withCompletion completion: @escaping () -> Void) {
         weak var blockSelf: MessageController? = self
-        let popup = PopupDialog(
+        
+        let alertController = UIAlertController(
             title: "Memory Issue Occurred",
             message: "There was not enough memory for the application to keep working",
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        let ok = DefaultButton(title: "Ok", height: 40, dismissOnTap: true, action: {
-                popup.dismiss(animated: true)
-                completion()
-                blockSelf?.didHideMessageByUser?()
-            })
+        let okAction = UIAlertAction(title: "Ok", style: .default) { _ in
+            completion()
+            blockSelf?.didHideMessageByUser?()
+        }
 
-        popup.addButtons([ok])
-        viewController?.present(popup, animated: true)
+        alertController.addAction(okAction)
+        viewController?.present(alertController, animated: true)
         didShowMessage?()
     }
 
     @objc func showMessageAboutConnectionRequired() {
         weak var blockSelf: MessageController? = self
-        let popup = PopupDialog(
+        
+        let alertController = UIAlertController(
             title: "Internet Connection is Unavailable",
             message: "Application will restart automatically when a connection becomes available",
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        let ok = DefaultButton(title: "Ok", height: 40, dismissOnTap: true, action: {
-                popup.dismiss(animated: true)
+        let okAction = UIAlertAction(title: "Ok", style: .default) { _ in
+            blockSelf?.didHideMessageByUser?()
+        }
 
-                blockSelf?.didHideMessageByUser?()
-            })
-
-        popup.addButtons([ok])
-        viewController?.present(popup, animated: true)
+        alertController.addAction(okAction)
+        viewController?.present(alertController, animated: true)
         didShowMessage?()
     }
 
     func showMessageAboutResetTracking(_ responseBlock: @escaping (ResetTrackingOption) -> Void) {
-        let popup = PopupDialog(
+        let alertController = UIAlertController(
             title: "Reset Tracking",
             message: "Please select one of the options below",
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.vertical,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .actionSheet
         )
 
-        let resetTracking = DefaultButton(title: "Completely restart tracking", height: 40, dismissOnTap: true, action: {
-                responseBlock(.resetTracking)
-            })
+        let resetTrackingAction = UIAlertAction(title: "Completely restart tracking", style: .default) { _ in
+            responseBlock(.resetTracking)
+        }
 
-        let removeExistingAnchors = DefaultButton(title: "Remove known anchors", height: 40, dismissOnTap: true, action: {
-                responseBlock(.removeExistingAnchors)
-            })
+        let removeExistingAnchorsAction = UIAlertAction(title: "Remove known anchors", style: .default) { _ in
+            responseBlock(.removeExistingAnchors)
+        }
 
-        let saveWorldMap = DefaultButton(title: "Save World Map", height: 40, dismissOnTap: true, action: {
-                responseBlock(.saveWorldMap)
-            })
+        let saveWorldMapAction = UIAlertAction(title: "Save World Map", style: .default) { _ in
+            responseBlock(.saveWorldMap)
+        }
 
-        let loadWorldMap = DefaultButton(title: "Load previously saved World Map", height: 40, dismissOnTap: true, action: {
-                responseBlock(.loadSavedWorldMap)
-            })
+        let loadWorldMapAction = UIAlertAction(title: "Load previously saved World Map", style: .default) { _ in
+            responseBlock(.loadSavedWorldMap)
+        }
 
-        let cancelButton = CancelButton(title: "Cancel", height: 40, dismissOnTap: true, action: {
-            })
+        let cancelAction = UIAlertAction(title: "Cancel", style: .cancel)
 
-        popup.addButtons([resetTracking, removeExistingAnchors, saveWorldMap, loadWorldMap, cancelButton])
+        alertController.addAction(resetTrackingAction)
+        alertController.addAction(removeExistingAnchorsAction)
+        alertController.addAction(saveWorldMapAction)
+        alertController.addAction(loadWorldMapAction)
+        alertController.addAction(cancelAction)
 
-        viewController?.present(popup, animated: true)
+        viewController?.present(alertController, animated: true)
     }
 
     @objc func showMessageAboutAccessingTheCapturedImage(_ granted: @escaping (Bool) -> Void) {
-        let popup = PopupDialog(
+        let alertController = UIAlertController(
             title: "Video Camera Image Access",
             message: "WebXR Viewer displays video from your camera without giving the web page access to the video.\n\nThis page is requesting access to images from the video camera. Allow?",
-            image: nil,
-            buttonAlignment: NSLayoutConstraint.Axis.horizontal,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340.0,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+            preferredStyle: .alert
         )
 
-        let ok = DefaultButton(title: "YES", height: 40, dismissOnTap: true, action: {
-                granted(true)
-            })
+        let yesAction = UIAlertAction(title: "YES", style: .default) { _ in
+            granted(true)
+        }
 
-        let cancel = CancelButton(title: "NO", height: 40, dismissOnTap: true, action: {
-                granted(false)
-            })
+        let noAction = UIAlertAction(title: "NO", style: .cancel) { _ in
+            granted(false)
+        }
 
-        popup.addButtons([cancel, ok])
-        viewController?.present(popup, animated: true)
+        alertController.addAction(noAction)
+        alertController.addAction(yesAction)
+        viewController?.present(alertController, animated: true)
     }
 
     @objc func showPermissionsPopup() {
         let permissionsViewController = RequestPermissionsViewController()
-        permissionsViewController.view.translatesAutoresizingMaskIntoConstraints = true
-        permissionsViewController.view.heightAnchor.constraint(equalToConstant: 300.0).isActive = true
-
-        let dialog = PopupDialog(
-            viewController: permissionsViewController,
-            buttonAlignment: NSLayoutConstraint.Axis.vertical,
-            transitionStyle: .bounceUp,
-            preferredWidth: 340,
-            tapGestureDismissal: false,
-            panGestureDismissal: false,
-            hideStatusBar: true
+        
+        // Create a container for the custom view controller
+        let alertController = UIAlertController(
+            title: nil,
+            message: nil,
+            preferredStyle: .alert
         )
-
-        viewController?.present(dialog, animated: true)
+        
+        // Add the permissions view to the alert controller
+        alertController.view.addSubview(permissionsViewController.view)
+        permissionsViewController.view.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Set constraints
+        NSLayoutConstraint.activate([
+            permissionsViewController.view.topAnchor.constraint(equalTo: alertController.view.topAnchor),
+            permissionsViewController.view.bottomAnchor.constraint(equalTo: alertController.view.bottomAnchor),
+            permissionsViewController.view.leadingAnchor.constraint(equalTo: alertController.view.leadingAnchor),
+            permissionsViewController.view.trailingAnchor.constraint(equalTo: alertController.view.trailingAnchor),
+            permissionsViewController.view.heightAnchor.constraint(equalToConstant: 300.0)
+        ])
+        
+        // Configure alert controller
+        alertController.preferredContentSize = CGSize(width: 340, height: 300)
+        
+        // Add a done button
+        let doneAction = UIAlertAction(title: "Done", style: .cancel, handler: nil)
+        alertController.addAction(doneAction)
+        
+        viewController?.present(alertController, animated: true)
     }
     
     @objc func showMessageAboutEnteringXR(_ authorizationRequested: WebXRAuthorizationState, authorizationGranted: @escaping (WebXRAuthorizationState) -> Void, url: URL) {
@@ -361,6 +288,11 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
             }
         }
         
+        // Create a custom XR permissions view controller
+        requestXRPermissionsVC = RequestXRPermissionsViewController()
+        guard let requestXRPermissionsVC = requestXRPermissionsVC else { return }
+        
+        // Configure the table view
         var height = CGFloat()
         let rowHeight: CGFloat = 44
         switch webXRAuthorizationRequested {
@@ -375,9 +307,7 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
         default:
             height = rowHeight * 1
         }
-        requestXRPermissionsVC = RequestXRPermissionsViewController()
-        guard let requestXRPermissionsVC = requestXRPermissionsVC else { return }
-        requestXRPermissionsVC.view.translatesAutoresizingMaskIntoConstraints = true
+        
         requestXRPermissionsVC.tableView.heightAnchor.constraint(equalToConstant: height).isActive = true
         requestXRPermissionsVC.tableView.isScrollEnabled = false
         requestXRPermissionsVC.tableView.delegate = self
@@ -385,6 +315,7 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
         requestXRPermissionsVC.tableView.register(UINib(nibName: "SwitchInputTableViewCell", bundle: Bundle.main), forCellReuseIdentifier: "SwitchInputTableViewCell")
         requestXRPermissionsVC.tableView.register(UINib(nibName: "SegmentedControlTableViewCell", bundle: Bundle.main), forCellReuseIdentifier: "SegmentedControlTableViewCell")
         
+        // Set title and message based on authorization requested
         var title: String
         var message: String
         switch webXRAuthorizationRequested {
@@ -419,26 +350,42 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
         }
         requestXRPermissionsVC.titleLabel.text = title
         requestXRPermissionsVC.messageLabel.text = message
-        let alertController = PopupDialog(viewController: requestXRPermissionsVC,
-                                          buttonAlignment: .horizontal,
-                                          transitionStyle: .bounceUp,
-                                          preferredWidth: 300,
-                                          tapGestureDismissal: false,
-                                          panGestureDismissal: false,
-                                          hideStatusBar: false,
-                                          completion: nil)
-        let negativeAction: CancelButton
+        
+        // Create and configure alert controller
+        let alertController = UIAlertController(
+            title: nil,
+            message: nil,
+            preferredStyle: .alert
+        )
+        
+        alertController.view.addSubview(requestXRPermissionsVC.view)
+        requestXRPermissionsVC.view.translatesAutoresizingMaskIntoConstraints = false
+        
+        // Set constraints
+        NSLayoutConstraint.activate([
+            requestXRPermissionsVC.view.topAnchor.constraint(equalTo: alertController.view.topAnchor),
+            requestXRPermissionsVC.view.bottomAnchor.constraint(equalTo: alertController.view.bottomAnchor),
+            requestXRPermissionsVC.view.leadingAnchor.constraint(equalTo: alertController.view.leadingAnchor),
+            requestXRPermissionsVC.view.trailingAnchor.constraint(equalTo: alertController.view.trailingAnchor),
+            requestXRPermissionsVC.view.heightAnchor.constraint(equalToConstant: height + 100) // Add some extra space for the title/message
+        ])
+        
+        // Configure alert size
+        alertController.preferredContentSize = CGSize(width: 300, height: height + 140)
+        
+        // Add action buttons
+        let negativeAction: UIAlertAction
         if forceShowPermissionsPopup {
-            negativeAction = CancelButton(title: "Dismiss", action: nil)
+            negativeAction = UIAlertAction(title: "Dismiss", style: .cancel, handler: nil)
         } else {
-            negativeAction = CancelButton(title: "Deny") {
+            negativeAction = UIAlertAction(title: "Deny", style: .cancel) { _ in
                 authorizationGranted(.denied)
             }
         }
-        alertController.addButton(negativeAction)
+        alertController.addAction(negativeAction)
         forceShowPermissionsPopup = false
         
-        let confirmAction = DefaultButton(title: "Confirm") {
+        let confirmAction = UIAlertAction(title: "Confirm", style: .default) { _ in
             if let minimalCell = blockSelf?.requestXRPermissionsVC?.tableView.cellForRow(at: IndexPath(row: 0, section: 0)) as? SwitchInputTableViewCell {
                 standardUserDefaults.set(minimalCell.switchControl.isOn, forKey: Constant.minimalWebXREnabled())
             }
@@ -525,7 +472,7 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
                 authorizationGranted(.denied)
             }
         }
-        alertController.addButton(confirmAction)
+        alertController.addAction(confirmAction)
         
         permissionsPopup = alertController
         viewController?.present(alertController, animated: true)
@@ -619,7 +566,7 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
             return 1
         }
     }
-    
+
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         switch indexPath.row {
         case 0, 1:
@@ -721,34 +668,34 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
 
     // MARK: private
 
-    func setupAppearance() {
-        let largeFont = UIFont.boldSystemFont(ofSize: 17)
-        let smallFont = UIFont.systemFont(ofSize: 14)
-        PopupDialogDefaultView.appearance().backgroundColor = UIColor.clear
-        PopupDialogDefaultView.appearance().titleFont = largeFont
-        PopupDialogDefaultView.appearance().titleColor = UIColor.black
-        PopupDialogDefaultView.appearance().messageFont = smallFont
-        PopupDialogDefaultView.appearance().messageColor = UIColor.black
-
-        PopupDialogContainerView.appearance().cornerRadius = 13
-        
-        PopupDialogOverlayView.appearance().color = UIColor(white: 0, alpha: 0.5)
-        PopupDialogOverlayView.appearance().blurRadius = 10
-        PopupDialogOverlayView.appearance().blurEnabled = true
-        PopupDialogOverlayView.appearance().liveBlurEnabled = false
-        PopupDialogOverlayView.appearance().opacity = 0.5
-
-        DefaultButton.appearance().titleFont = largeFont
-        DefaultButton.appearance().titleColor = UIColor.blue
-        DefaultButton.appearance().buttonColor = UIColor.clear
-        DefaultButton.appearance().separatorColor = UIColor(white: 0.8, alpha: 1)
-
-        CancelButton.appearance().titleColor = UIColor.gray
-        CancelButton.appearance().titleFont = largeFont
-        
-        DestructiveButton.appearance().titleColor = UIColor.red
-        DestructiveButton.appearance().titleFont = largeFont
-    }
+//    func setupAppearance() {
+//        let largeFont = UIFont.boldSystemFont(ofSize: 17)
+//        let smallFont = UIFont.systemFont(ofSize: 14)
+//        PopupDialogDefaultView.appearance().backgroundColor = UIColor.clear
+//        PopupDialogDefaultView.appearance().titleFont = largeFont
+//        PopupDialogDefaultView.appearance().titleColor = UIColor.black
+//        PopupDialogDefaultView.appearance().messageFont = smallFont
+//        PopupDialogDefaultView.appearance().messageColor = UIColor.black
+//
+//        PopupDialogContainerView.appearance().cornerRadius = 13
+//        
+//        PopupDialogOverlayView.appearance().color = UIColor(white: 0, alpha: 0.5)
+//        PopupDialogOverlayView.appearance().blurRadius = 10
+//        PopupDialogOverlayView.appearance().blurEnabled = true
+//        PopupDialogOverlayView.appearance().liveBlurEnabled = false
+//        PopupDialogOverlayView.appearance().opacity = 0.5
+//
+//        DefaultButton.appearance().titleFont = largeFont
+//        DefaultButton.appearance().titleColor = UIColor.blue
+//        DefaultButton.appearance().buttonColor = UIColor.clear
+//        DefaultButton.appearance().separatorColor = UIColor(white: 0.8, alpha: 1)
+//
+//        CancelButton.appearance().titleColor = UIColor.gray
+//        CancelButton.appearance().titleFont = largeFont
+//        
+//        DestructiveButton.appearance().titleColor = UIColor.red
+//        DestructiveButton.appearance().titleFont = largeFont
+//    }
     
     @objc func learnMoreLiteModeTapped() {
         let alert = UIAlertController(title: "What's Lite Mode?", message: """

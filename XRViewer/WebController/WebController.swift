@@ -1,6 +1,6 @@
 import Foundation
 import WebKit
-import CocoaLumberjack
+//import CocoaLumberjack
 
 typealias ResultBlock = ([AnyHashable : Any]?) -> Void
 typealias ResultArrayBlock = ([Any]?) -> Void

@@ -4,12 +4,13 @@
 
 #import "ARKHelper.h"
 #import "ARKController.h"
-#import <CocoaLumberjack/CocoaLumberjack.h>
+//#import <CocoaLumberjack/CocoaLumberjack.h>
 
 #if DEBUG
-static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
+//static const DDLogLevel ddLogLevel = DDLogLevelVerbose;
 #else
-static const DDLogLevel ddLogLevel = DDLogLevelWarning;
+//static const DDLogLevel ddLogLevel = DDLogLevelWarning;
 #endif
+
 
 typedef void (^HotAction)(BOOL); // long

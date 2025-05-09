@@ -1,11 +1,9 @@
-import pop
 import UIKit
-import CocoaLumberjack
+//import CocoaLumberjack
 
 typealias Completion = (Bool) -> Void
 
 let DEFAULT_ANIMATION_DURATION = 0.5
-let ANIMATION_PULSE_KEY = "pulse"
 let ANIMATION_FRAME_KEY = "frame"
 let ANIMATION_COLOR_KEY = "color"
 
@@ -13,8 +11,6 @@ class AnimationDelegate: NSObject, CAAnimationDelegate {
     var completion: Completion?
     
     func animationDidStop(_ anim: CAAnimation, finished flag: Bool) {
-        //if completion
-        
         completion?(flag)
     }
 }
@@ -37,126 +33,88 @@ class Animator: NSObject, CAAnimationDelegate {
     
     @objc func clean() {
         animationCompletions.removeAll()
-//        UIApplication.shared.keyWindow?.pop_removeAllAnimations()
-//        UIApplication.shared.keyWindow?.layer.pop_removeAllAnimations()
-//        UIApplication.shared.keyWindow?.layer.removeAllAnimations()
-        
-        let window: UIWindow? = {
-            if #available(iOS 13.0, *) {
-                if let windowScene = UIApplication.shared.connectedScenes
-                    .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-                    return windowScene.windows.first
-                }
-            }
-            return UIApplication.shared.keyWindow
-        }()
-
-        window?.pop_removeAllAnimations()
-        window?.layer.pop_removeAllAnimations()
-        window?.layer.removeAllAnimations()
+        UIApplication.shared.keyWindow?.layer.removeAllAnimations()
     }
     
     func startPulseAnimation(_ view: UIView?) {
-        let anim = POPSpringAnimation(propertyNamed: kPOPViewScaleXY)
-        anim?.toValue = CGPoint(x: 1.1, y: 1.1)
-        anim?.fromValue = CGPoint(x: 0.9, y: 0.9)
-        anim?.repeatForever = true
-        anim?.autoreverses = true
-
-        view?.pop_add(anim, forKey: ANIMATION_PULSE_KEY)
+        guard let view = view else { return }
+        
+        // Remove any existing animations
+        view.layer.removeAnimation(forKey: "pulse")
+        
+        // Create a basic animation for scaling
+        UIView.animate(withDuration: 1.0, delay: 0, options: [.autoreverse, .repeat], animations: {
+            view.transform = CGAffineTransform(scaleX: 1.1, y: 1.1)
+        }, completion: nil)
     }
 
     func stopPulseAnimation(_ view: UIView?) {
-        view?.pop_removeAnimation(forKey: ANIMATION_PULSE_KEY)
+        guard let view = view else { return }
+        
+        // Stop animation and reset transform
+        view.layer.removeAnimation(forKey: "pulse")
+        UIView.animate(withDuration: 0.3, animations: {
+            view.transform = CGAffineTransform.identity
+        })
     }
 
     func animate(_ view: UIView?, toFrame frame: CGRect) {
-        animate(view, toFrame: frame) { (bool) in
-        }
+        animate(view, toFrame: frame) { (bool) in }
     }
 
     func animate(_ view: UIView?, toFrame frame: CGRect, completion: @escaping Completion) {
-        guard var viewFrame = view?.frame else { return }
-        if frame.equalTo(viewFrame) {
-            //if completion
-
-            DispatchQueue.main.async(execute: {
-                completion(false)
-            })
+        guard let view = view else {
+            DispatchQueue.main.async { completion(false) }
+            return
+        }
+        
+        if frame.equalTo(view.frame) {
+            DispatchQueue.main.async { completion(false) }
             return
         }
 
-        let anim = POPSpringAnimation(propertyNamed: kPOPViewFrame)
-        anim?.toValue = frame
-        anim?.fromValue = viewFrame
-        anim?.completionBlock = { anim, finished in
-            viewFrame = frame
-            //if completion
-
+        UIView.animate(withDuration: animationDuration, delay: 0, options: .curveEaseInOut, animations: {
+            view.frame = frame
+        }) { finished in
             completion(finished)
         }
-
-        view?.pop_add(anim, forKey: ANIMATION_FRAME_KEY)
     }
 
     @objc func animate(_ view: UIView?, toFade fade: Bool) {
-        animate(view, toFade: fade) { (bool) in
-        }
+        animate(view, toFade: fade) { (bool) in }
     }
 
     func animate(_ view: UIView?, toFade fade: Bool, completion: @escaping Completion) {
-        let newOpacity: CGFloat = fade ? 0 : 1
-
-        if CGFloat(view?.layer.opacity ?? 0.0) == newOpacity {
-            //if completion
-
-            DispatchQueue.main.async(execute: {
-                completion(false)
-            })
+        guard let view = view else {
+            DispatchQueue.main.async { completion(false) }
             return
         }
-
-        view?.layer.opacity = Float(newOpacity)
-
-        var key: String? = nil
-        if let aView = view {
-            key = "FADE-\(aView)"
+        
+        let newOpacity: CGFloat = fade ? 0 : 1
+        
+        if CGFloat(view.layer.opacity) == newOpacity {
+            DispatchQueue.main.async { completion(false) }
+            return
         }
-        view?.layer.removeAnimation(forKey: key ?? "")
-
-        let transition = CATransition()
-        transition.duration = animationDuration
-        transition.type = .fade
-
-        let ad = AnimationDelegate()
-        weak var blockAd: AnimationDelegate? = ad
-        weak var blockSelf: Animator? = self
-
-        ad.completion = { f in
-            //if completion
-
-            completion(f)
-            blockSelf?.animationCompletions.removeAll(where: { $0 == blockAd })
+        
+        UIView.animate(withDuration: animationDuration, animations: {
+            view.layer.opacity = Float(newOpacity)
+        }) { finished in
+            completion(finished)
         }
-
-        transition.delegate = ad
-        animationCompletions.append(ad)
-
-        view?.layer.add(transition, forKey: key)
     }
 
     func animate(_ view: UIView?, to color: UIColor?) {
-        if view?.backgroundColor == color {
+        guard let view = view, let color = color else { return }
+        
+        if view.backgroundColor == color {
             return
         }
-
-        let anim = POPSpringAnimation(propertyNamed: kPOPViewBackgroundColor)
-        anim?.toValue = color
-        anim?.fromValue = view?.backgroundColor
-        anim?.completionBlock = { anim, finished in
-            view?.backgroundColor = color
+        
+        let oldColor = view.backgroundColor ?? UIColor.clear
+        
+        UIView.animate(withDuration: animationDuration) {
+            view.backgroundColor = color
         }
-
-        view?.pop_add(anim, forKey: ANIMATION_COLOR_KEY)
     }
 }

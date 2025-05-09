@@ -1,13 +1,13 @@
 import ARKit
 import SceneKit
-import CocoaLumberjack
+//import CocoaLumberjack
 
 class ARKSceneKitController: NSObject, ARKControllerProtocol, ARSCNViewDelegate {
     
     private var session: ARSession?
     private var renderView: ARSCNView?
     private weak var camera: SCNCamera?
-    private var anchorsNodes: [AnchorNode] = []
+    private var anchorsNodes: [AnchorNode] = []	
 
     private var showMode: ShowMode? {
         didSet {

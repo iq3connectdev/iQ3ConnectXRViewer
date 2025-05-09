@@ -1,5 +1,5 @@
 import UIKit
-import CocoaLumberjack
+//import CocoaLumberjack
 import CoreMotion
 
 @UIApplicationMain
@@ -9,7 +9,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
         registerDefaultsFromSettingsBundle()
 
-        DDLog.add(DDTTYLogger.sharedInstance) // TTY = Xcode console
+//        DDLog.add(DDTTYLogger.sharedInstance) // TTY = Xcode console
 
         UIApplication.shared.isIdleTimerDisabled = true
 

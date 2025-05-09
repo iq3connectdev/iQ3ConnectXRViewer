@@ -1,6 +1,6 @@
 import ARKit
 import SceneKit
-import CocoaLumberjack
+//import CocoaLumberjack
 
 enum AnchorFigure : Int {
     case anchorBox

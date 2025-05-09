@@ -3,6 +3,7 @@
 #import <Accelerate/Accelerate.h>
 #import "Compression.h"
 #import "iQ3ConnectXRViewer-Swift.h"
+//#import "<Resources/logger.swift>"
 
 @interface ARKController () {
 }
@@ -16,7 +17,7 @@
 
 - (void)dealloc
 {
-    DDLogDebug(@"ARKController dealloc");
+//    DDLogDebug(@"ARKController dealloc");
 }
 
 - (instancetype)initWithType:(ARKType)type rootView:(UIView *)rootView
@@ -100,7 +101,7 @@
         {
             // Failed to create directory
             self.worldSaveURL = nil;
-            DDLogError(@"Couldn't create map save directory error - %@", theError);
+//            DDLogError(@"Couldn't create map save directory error - %@", theError);
         } else {
             self.worldSaveURL = [newDir URLByAppendingPathComponent:@"webxrviewer"];
         }

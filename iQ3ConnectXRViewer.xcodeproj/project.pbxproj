@@ -13,6 +13,7 @@
 		04A8156A1F419F840082D31D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 041503D31F28944F00887400 /* Assets.xcassets */; };
 		04A9837A1F32291D00120CF8 /* ARKController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04A983651F32268900120CF8 /* ARKController.m */; };
 		04A9837C1F32292900120CF8 /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 04A9836A1F3226A500120CF8 /* Shaders.metal */; };
+		52714561C0BD99A929B7DE81 /* Pods_iQ3ConnectXRViewer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F663CD442A58C8E9E7611D73 /* Pods_iQ3ConnectXRViewer.framework */; };
 		6207254E206A90BF00887B1F /* RequestPermissionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6207254C206A90BF00887B1F /* RequestPermissionsViewController.swift */; };
 		6207254F206A90BF00887B1F /* RequestPermissionsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6207254D206A90BF00887B1F /* RequestPermissionsViewController.xib */; };
 		620D24A11FC48994002127FD /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 620D24A01FC48994002127FD /* Settings.bundle */; };
@@ -27,73 +28,7 @@
 		625051091FCDBDBE00EEAC0A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 625051081FCDBDBE00EEAC0A /* GoogleService-Info.plist */; };
 		625FA2E6202046BF00F62698 /* TermsAndConditionsTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625FA2E4202046BF00F62698 /* TermsAndConditionsTableViewCell.swift */; };
 		625FA2E7202046BF00F62698 /* TermsAndConditionsTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 625FA2E5202046BF00F62698 /* TermsAndConditionsTableViewCell.xib */; };
-		7E0BF3C62DBFA7EF002388CF /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B632851421C4191200FD5510 /* AppDelegate.swift */; };
-		7E0BF3C72DBFA7EF002388CF /* ARKController+ARSessionObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6468D8D228CC20C002F22A3 /* ARKController+ARSessionObserver.swift */; };
-		7E0BF3C82DBFA7EF002388CF /* ARKController+Anchors.swift in Sources */ = {isa = PBXBuildFile; fileRef = B654FED321F1179B0004F001 /* ARKController+Anchors.swift */; };
-		7E0BF3C92DBFA7EF002388CF /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FEAC0E224AD4D500EE0343 /* Renderer.swift */; };
-		7E0BF3CA2DBFA7EF002388CF /* TermsAndConditionsTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625FA2E4202046BF00F62698 /* TermsAndConditionsTableViewCell.swift */; };
-		7E0BF3CB2DBFA7EF002388CF /* HitTestResult.swift in Sources */ = {isa = PBXBuildFile; fileRef = B68A7C4E21BB2FAB0033170C /* HitTestResult.swift */; };
-		7E0BF3CC2DBFA7EF002388CF /* ARKControllerProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = B68A7C5021BB34C40033170C /* ARKControllerProtocol.swift */; };
-		7E0BF3CD2DBFA7EF002388CF /* Shaders.metal in Sources */ = {isa = PBXBuildFile; fileRef = 04A9836A1F3226A500120CF8 /* Shaders.metal */; };
-		7E0BF3CE2DBFA7EF002388CF /* ARKController+ARSessionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED0F21FB90A50066B4A8 /* ARKController+ARSessionDelegate.swift */; };
-		7E0BF3CF2DBFA7EF002388CF /* ActivityIndicatorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61E2B2622249D500031955F /* ActivityIndicatorButton.swift */; };
-		7E0BF3D02DBFA7EF002388CF /* RequestXRPermissionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6B7A6962266594B008E8978 /* RequestXRPermissionsViewController.swift */; };
-		7E0BF3D12DBFA7EF002388CF /* MessageController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B632850821C2F24200FD5510 /* MessageController.swift */; };
-		7E0BF3D22DBFA7EF002388CF /* ARKController+WorldMap.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED1122024D5A0066B4A8 /* ARKController+WorldMap.swift */; };
-		7E0BF3D32DBFA7EF002388CF /* LayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B632851221C4159B00FD5510 /* LayerView.swift */; };
-		7E0BF3D42DBFA7EF002388CF /* fontController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFC179C2D785D5F001432EF /* fontController.swift */; };
-		7E0BF3D52DBFA7EF002388CF /* ARKController+Frame.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F4C0BC221B5AEC009ECC06 /* ARKController+Frame.swift */; };
-		7E0BF3D62DBFA7EF002388CF /* Prefix.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6EAD6DC21DAB48800DF5127 /* Prefix.swift */; };
-		7E0BF3D72DBFA7EF002388CF /* ARKController+AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B654FED121EF99150004F001 /* ARKController+AppState.swift */; };
-		7E0BF3D82DBFA7EF002388CF /* SCNNode+Show.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69C047F21B836E300C9A4EC /* SCNNode+Show.swift */; };
-		7E0BF3D92DBFA7EF002388CF /* TextInputTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62242AC1201F2A0700506412 /* TextInputTableViewCell.swift */; };
-		7E0BF3DA2DBFA7EF002388CF /* SegmentedControlTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6679351222894C600939804 /* SegmentedControlTableViewCell.swift */; };
-		7E0BF3DB2DBFA7EF002388CF /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67D979621C4404E0075FE0A /* Utils.swift */; };
-		7E0BF3DC2DBFA7EF002388CF /* TouchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FE960421B61FEE0087A21F /* TouchView.swift */; };
-		7E0BF3DD2DBFA7EF002388CF /* ARKController.m in Sources */ = {isa = PBXBuildFile; fileRef = 04A983651F32268900120CF8 /* ARKController.m */; };
-		7E0BF3DE2DBFA7EF002388CF /* ARKController+Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED0D21F7B2E90066B4A8 /* ARKController+Images.swift */; };
-		7E0BF3DF2DBFA7EF002388CF /* ShaderTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FEAC0C224AC20200EE0343 /* ShaderTypes.swift */; };
-		7E0BF3E02DBFA7EF002388CF /* Reachability.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62CE86421CC0FDF0053F9B3 /* Reachability.swift */; };
-		7E0BF3E12DBFA7EF002388CF /* BarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B679967821B06A7000612AF4 /* BarView.swift */; };
-		7E0BF3E22DBFA7EF002388CF /* ARSCNView+HitTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69C048121B838A300C9A4EC /* ARSCNView+HitTest.swift */; };
-		7E0BF3E32DBFA7EF002388CF /* FocusNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69C047921B73E9800C9A4EC /* FocusNode.swift */; };
-		7E0BF3E42DBFA7EF002388CF /* SettingsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62242ABF201F037F00506412 /* SettingsViewController.swift */; };
-		7E0BF3E52DBFA7EF002388CF /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = B698073F21DA7A8900322782 /* AppState.swift */; };
-		7E0BF3E62DBFA7EF002388CF /* ARKSceneKitController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B64B19FD21B9832A00787AA5 /* ARKSceneKitController.swift */; };
-		7E0BF3E72DBFA7EF002388CF /* PlaneNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69C047D21B8325F00C9A4EC /* PlaneNode.swift */; };
-		7E0BF3E82DBFA7EF002388CF /* SwitchInputTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62242AC5201F2AE100506412 /* SwitchInputTableViewCell.swift */; };
-		7E0BF3E92DBFA7EF002388CF /* AnchorNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B69C047521B7333500C9A4EC /* AnchorNode.swift */; };
-		7E0BF3EA2DBFA7EF002388CF /* AppStateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FE960221B61BDC0087A21F /* AppStateController.swift */; };
-		7E0BF3EB2DBFA7EF002388CF /* UIOverlayController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67D97A221C8453F0075FE0A /* UIOverlayController.swift */; };
-		7E0BF3EC2DBFA7EF002388CF /* ViewController+MessagePanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6468D8F228F5074002F22A3 /* ViewController+MessagePanel.swift */; };
-		7E0BF3ED2DBFA7EF002388CF /* OverlayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67D97A421C854C20075FE0A /* OverlayViewController.swift */; };
-		7E0BF3EE2DBFA7EF002388CF /* TextTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 62242AC9201F2D3600506412 /* TextTableViewCell.swift */; };
-		7E0BF3EF2DBFA7EF002388CF /* Animator.swift in Sources */ = {isa = PBXBuildFile; fileRef = B67D97A621C9843B0075FE0A /* Animator.swift */; };
-		7E0BF3F02DBFA7EF002388CF /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B62CE86221CAD3B00053F9B3 /* ViewController.swift */; };
-		7E0BF3F12DBFA7EF002388CF /* WebController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B658C0F121BF43D500538D57 /* WebController.swift */; };
-		7E0BF3F22DBFA7EF002388CF /* ARKMetalController.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FAD7BF221F2F9100310114 /* ARKMetalController.swift */; };
-		7E0BF3F32DBFA7EF002388CF /* ARKController+Camera.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED132204B5480066B4A8 /* ARKController+Camera.swift */; };
-		7E0BF3F42DBFA7EF002388CF /* AnalyticsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6241012C1FEABABF006FDBE3 /* AnalyticsManager.swift */; };
-		7E0BF3F52DBFA7EF002388CF /* RequestPermissionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6207254C206A90BF00887B1F /* RequestPermissionsViewController.swift */; };
-		7E0BF3F62DBFA7EF002388CF /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = B632850621C2D98900FD5510 /* LocationManager.swift */; };
-		7E0BF3F72DBFA7EF002388CF /* Constants.swift in Sources */ = {isa = PBXBuildFile; fileRef = B632851621C4330500FD5510 /* Constants.swift */; };
-		7E0BF3FA2DBFA7EF002388CF /* RequestPermissionsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = 6207254D206A90BF00887B1F /* RequestPermissionsViewController.xib */; };
-		7E0BF3FB2DBFA7EF002388CF /* webxr.js in Resources */ = {isa = PBXBuildFile; fileRef = 8E5089D7211B6DA90059015B /* webxr.js */; };
-		7E0BF3FC2DBFA7EF002388CF /* BarView.xib in Resources */ = {isa = PBXBuildFile; fileRef = 0401E04A1F612C240075D823 /* BarView.xib */; };
-		7E0BF3FD2DBFA7EF002388CF /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 041503D01F28944F00887400 /* Main.storyboard */; };
-		7E0BF3FE2DBFA7EF002388CF /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E7922D6351B3007C97F0 /* SplashScreen.storyboard */; };
-		7E0BF3FF2DBFA7EF002388CF /* RequestXRPermissionsViewController.xib in Resources */ = {isa = PBXBuildFile; fileRef = B6B7A6972266594B008E8978 /* RequestXRPermissionsViewController.xib */; };
-		7E0BF4002DBFA7EF002388CF /* TermsAndConditionsTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 625FA2E5202046BF00F62698 /* TermsAndConditionsTableViewCell.xib */; };
-		7E0BF4012DBFA7EF002388CF /* SegmentedControlTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = B6679352222894C600939804 /* SegmentedControlTableViewCell.xib */; };
-		7E0BF4022DBFA7EF002388CF /* TextInputTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 62242AC2201F2A0700506412 /* TextInputTableViewCell.xib */; };
-		7E0BF4032DBFA7EF002388CF /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 041503D31F28944F00887400 /* Assets.xcassets */; };
-		7E0BF4042DBFA7EF002388CF /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 620D24A01FC48994002127FD /* Settings.bundle */; };
-		7E0BF4052DBFA7EF002388CF /* SplashScreen2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E79D2D6521D7007C97F0 /* SplashScreen2.storyboard */; };
-		7E0BF4062DBFA7EF002388CF /* MyriadPro-Regular.OTF in Resources */ = {isa = PBXBuildFile; fileRef = B632850A21C330A500FD5510 /* MyriadPro-Regular.OTF */; };
-		7E0BF4072DBFA7EF002388CF /* TextTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 62242ACA201F2D3600506412 /* TextTableViewCell.xib */; };
-		7E0BF4082DBFA7EF002388CF /* Models.scnassets in Resources */ = {isa = PBXBuildFile; fileRef = 04A815671F419EB60082D31D /* Models.scnassets */; };
-		7E0BF4092DBFA7EF002388CF /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 625051081FCDBDBE00EEAC0A /* GoogleService-Info.plist */; };
-		7E0BF40A2DBFA7EF002388CF /* SwitchInputTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 62242AC6201F2AE100506412 /* SwitchInputTableViewCell.xib */; };
+		7E310B692DCB5F1000AD4796 /* logger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E310B682DCB5F0B00AD4796 /* logger.swift */; };
 		7E85E7932D6351B3007C97F0 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E7922D6351B3007C97F0 /* SplashScreen.storyboard */; };
 		7E85E79E2D6521D7007C97F0 /* SplashScreen2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E79D2D6521D7007C97F0 /* SplashScreen2.storyboard */; };
 		7EFC179D2D785D68001432EF /* fontController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFC179C2D785D5F001432EF /* fontController.swift */; };
@@ -145,7 +80,7 @@
 
 /* Begin PBXFileReference section */
 		0401E04A1F612C240075D823 /* BarView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = BarView.xib; sourceTree = "<group>"; };
-		041503C11F28944F00887400 /* iQ3ConnectXRViewerVisionOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iQ3ConnectXRViewerVisionOS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		041503C11F28944F00887400 /* iQ3ConnectXRViewer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iQ3ConnectXRViewer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		041503D11F28944F00887400 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		041503D31F28944F00887400 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		041503D81F28944F00887400 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -154,6 +89,7 @@
 		04A983661F32268900120CF8 /* ARKController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ARKController.h; sourceTree = "<group>"; };
 		04A9836A1F3226A500120CF8 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		04BB9D641F39BE40004328A2 /* ARKHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ARKHelper.h; sourceTree = "<group>"; };
+		22B144FA69E179E03232D1EB /* Pods-iQ3ConnectXRViewer.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iQ3ConnectXRViewer.debug.xcconfig"; path = "Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer.debug.xcconfig"; sourceTree = "<group>"; };
 		6207254C206A90BF00887B1F /* RequestPermissionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestPermissionsViewController.swift; sourceTree = "<group>"; };
 		6207254D206A90BF00887B1F /* RequestPermissionsViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = RequestPermissionsViewController.xib; sourceTree = "<group>"; };
 		620D24A01FC48994002127FD /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
@@ -169,8 +105,8 @@
 		625051081FCDBDBE00EEAC0A /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		625FA2E4202046BF00F62698 /* TermsAndConditionsTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsTableViewCell.swift; sourceTree = "<group>"; };
 		625FA2E5202046BF00F62698 /* TermsAndConditionsTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = TermsAndConditionsTableViewCell.xib; sourceTree = "<group>"; };
-		7E0BF40E2DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "iQ3ConnectXRViewerVisionOS copy.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E0BF4102DBFA7EF002388CF /* iQ3ConnectXRViewer copy-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "iQ3ConnectXRViewer copy-Info.plist"; path = "/Users/iq3/Desktop/untitled folder/iQ3ConnectXRViewer/iQ3ConnectXRViewer copy-Info.plist"; sourceTree = "<absolute>"; };
+		7E310B682DCB5F0B00AD4796 /* logger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = logger.swift; sourceTree = "<group>"; };
 		7E85E7912D6351B3007C97F0 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/SplashScreen.storyboard; sourceTree = "<group>"; };
 		7E85E79C2D6521D7007C97F0 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/SplashScreen2.storyboard; sourceTree = "<group>"; };
 		7EFC179C2D785D5F001432EF /* fontController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = fontController.swift; sourceTree = "<group>"; };
@@ -218,29 +154,13 @@
 		B6FE960421B61FEE0087A21F /* TouchView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TouchView.swift; sourceTree = "<group>"; };
 		B6FEAC0C224AC20200EE0343 /* ShaderTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderTypes.swift; sourceTree = "<group>"; };
 		B6FEAC0E224AD4D500EE0343 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		E6428B351B448E51F2B1F807 /* Pods-iQ3ConnectXRViewer.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iQ3ConnectXRViewer.release.xcconfig"; path = "Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer.release.xcconfig"; sourceTree = "<group>"; };
+		F663CD442A58C8E9E7611D73 /* Pods_iQ3ConnectXRViewer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iQ3ConnectXRViewer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		7E0BF40F2DBFA7EF002388CF /* Exceptions for "homepage" folder in "iQ3ConnectXRViewerVisionOS copy" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				aframe.png,
-				google.png,
-				homepage.html,
-				logo.png,
-				Threejs_Icon.png,
-				xrbrowser.png,
-			);
-			target = 7E0BF3C42DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7EFC168B2D6E3257001432EF /* homepage */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				7E0BF40F2DBFA7EF002388CF /* Exceptions for "homepage" folder in "iQ3ConnectXRViewerVisionOS copy" target */,
-			);
 			path = homepage;
 			sourceTree = "<group>";
 		};
@@ -251,13 +171,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		7E0BF3F82DBFA7EF002388CF /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
+				52714561C0BD99A929B7DE81 /* Pods_iQ3ConnectXRViewer.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -271,14 +185,14 @@
 				041503C21F28944F00887400 /* Products */,
 				AFE5BF494CC7B1BC862A1216 /* Pods */,
 				7E0BF4102DBFA7EF002388CF /* iQ3ConnectXRViewer copy-Info.plist */,
+				C2869409FA5CF2624799B5CA /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
 		041503C21F28944F00887400 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				041503C11F28944F00887400 /* iQ3ConnectXRViewerVisionOS.app */,
-				7E0BF40E2DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy.app */,
+				041503C11F28944F00887400 /* iQ3ConnectXRViewer.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -369,6 +283,7 @@
 		04A983761F32279900120CF8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				7E310B682DCB5F0B00AD4796 /* logger.swift */,
 				7EFC168B2D6E3257001432EF /* homepage */,
 				6241012B1FEABABF006FDBE3 /* XRViewer-Bridging-Header.h */,
 				041503D81F28944F00887400 /* Info.plist */,
@@ -450,6 +365,8 @@
 		AFE5BF494CC7B1BC862A1216 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
+				22B144FA69E179E03232D1EB /* Pods-iQ3ConnectXRViewer.debug.xcconfig */,
+				E6428B351B448E51F2B1F807 /* Pods-iQ3ConnectXRViewer.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -465,13 +382,22 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		C2869409FA5CF2624799B5CA /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				F663CD442A58C8E9E7611D73 /* Pods_iQ3ConnectXRViewer.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		041503C01F28944F00887400 /* iQ3ConnectXRViewerVisionOS */ = {
+		041503C01F28944F00887400 /* iQ3ConnectXRViewer */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 041503DD1F28944F00887400 /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewerVisionOS" */;
+			buildConfigurationList = 041503DD1F28944F00887400 /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewer" */;
 			buildPhases = (
+				3BE1695DC0C369F9BCD8F732 /* [CP] Check Pods Manifest.lock */,
 				041503BD1F28944F00887400 /* Sources */,
 				041503BE1F28944F00887400 /* Frameworks */,
 				041503BF1F28944F00887400 /* Resources */,
@@ -483,29 +409,9 @@
 			fileSystemSynchronizedGroups = (
 				7EFC168B2D6E3257001432EF /* homepage */,
 			);
-			name = iQ3ConnectXRViewerVisionOS;
+			name = iQ3ConnectXRViewer;
 			productName = XRViewer;
-			productReference = 041503C11F28944F00887400 /* iQ3ConnectXRViewerVisionOS.app */;
-			productType = "com.apple.product-type.application";
-		};
-		7E0BF3C42DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 7E0BF40B2DBFA7EF002388CF /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewerVisionOS copy" */;
-			buildPhases = (
-				7E0BF3C52DBFA7EF002388CF /* Sources */,
-				7E0BF3F82DBFA7EF002388CF /* Frameworks */,
-				7E0BF3F92DBFA7EF002388CF /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			fileSystemSynchronizedGroups = (
-				7EFC168B2D6E3257001432EF /* homepage */,
-			);
-			name = "iQ3ConnectXRViewerVisionOS copy";
-			productName = XRViewer;
-			productReference = 7E0BF40E2DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy.app */;
+			productReference = 041503C11F28944F00887400 /* iQ3ConnectXRViewer.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -523,7 +429,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 041503BC1F28944F00887400 /* Build configuration list for PBXProject "iQ3ConnectXRViewerVisionOS" */;
+			buildConfigurationList = 041503BC1F28944F00887400 /* Build configuration list for PBXProject "iQ3ConnectXRViewer" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -536,8 +442,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				041503C01F28944F00887400 /* iQ3ConnectXRViewerVisionOS */,
-				7E0BF3C42DBFA7EF002388CF /* iQ3ConnectXRViewerVisionOS copy */,
+				041503C01F28944F00887400 /* iQ3ConnectXRViewer */,
 			);
 		};
 /* End PBXProject section */
@@ -567,31 +472,32 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7E0BF3F92DBFA7EF002388CF /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		3BE1695DC0C369F9BCD8F732 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7E0BF3FA2DBFA7EF002388CF /* RequestPermissionsViewController.xib in Resources */,
-				7E0BF3FB2DBFA7EF002388CF /* webxr.js in Resources */,
-				7E0BF3FC2DBFA7EF002388CF /* BarView.xib in Resources */,
-				7E0BF3FD2DBFA7EF002388CF /* Main.storyboard in Resources */,
-				7E0BF3FE2DBFA7EF002388CF /* SplashScreen.storyboard in Resources */,
-				7E0BF3FF2DBFA7EF002388CF /* RequestXRPermissionsViewController.xib in Resources */,
-				7E0BF4002DBFA7EF002388CF /* TermsAndConditionsTableViewCell.xib in Resources */,
-				7E0BF4012DBFA7EF002388CF /* SegmentedControlTableViewCell.xib in Resources */,
-				7E0BF4022DBFA7EF002388CF /* TextInputTableViewCell.xib in Resources */,
-				7E0BF4032DBFA7EF002388CF /* Assets.xcassets in Resources */,
-				7E0BF4042DBFA7EF002388CF /* Settings.bundle in Resources */,
-				7E0BF4052DBFA7EF002388CF /* SplashScreen2.storyboard in Resources */,
-				7E0BF4062DBFA7EF002388CF /* MyriadPro-Regular.OTF in Resources */,
-				7E0BF4072DBFA7EF002388CF /* TextTableViewCell.xib in Resources */,
-				7E0BF4082DBFA7EF002388CF /* Models.scnassets in Resources */,
-				7E0BF4092DBFA7EF002388CF /* GoogleService-Info.plist in Resources */,
-				7E0BF40A2DBFA7EF002388CF /* SwitchInputTableViewCell.xib in Resources */,
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-iQ3ConnectXRViewer-checkManifestLockResult.txt",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
 		};
-/* End PBXResourcesBuildPhase section */
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		041503BD1F28944F00887400 /* Sources */ = {
@@ -621,6 +527,7 @@
 				B6679353222894C600939804 /* SegmentedControlTableViewCell.swift in Sources */,
 				B67D979721C4404E0075FE0A /* Utils.swift in Sources */,
 				B6FE960521B61FEE0087A21F /* TouchView.swift in Sources */,
+				7E310B692DCB5F1000AD4796 /* logger.swift in Sources */,
 				04A9837A1F32291D00120CF8 /* ARKController.m in Sources */,
 				B620ED0E21F7B2E90066B4A8 /* ARKController+Images.swift in Sources */,
 				B6FEAC0D224AC20200EE0343 /* ShaderTypes.swift in Sources */,
@@ -648,63 +555,6 @@
 				6207254E206A90BF00887B1F /* RequestPermissionsViewController.swift in Sources */,
 				B632850721C2D98A00FD5510 /* LocationManager.swift in Sources */,
 				B632851721C4330500FD5510 /* Constants.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		7E0BF3C52DBFA7EF002388CF /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				7E0BF3C62DBFA7EF002388CF /* AppDelegate.swift in Sources */,
-				7E0BF3C72DBFA7EF002388CF /* ARKController+ARSessionObserver.swift in Sources */,
-				7E0BF3C82DBFA7EF002388CF /* ARKController+Anchors.swift in Sources */,
-				7E0BF3C92DBFA7EF002388CF /* Renderer.swift in Sources */,
-				7E0BF3CA2DBFA7EF002388CF /* TermsAndConditionsTableViewCell.swift in Sources */,
-				7E0BF3CB2DBFA7EF002388CF /* HitTestResult.swift in Sources */,
-				7E0BF3CC2DBFA7EF002388CF /* ARKControllerProtocol.swift in Sources */,
-				7E0BF3CD2DBFA7EF002388CF /* Shaders.metal in Sources */,
-				7E0BF3CE2DBFA7EF002388CF /* ARKController+ARSessionDelegate.swift in Sources */,
-				7E0BF3CF2DBFA7EF002388CF /* ActivityIndicatorButton.swift in Sources */,
-				7E0BF3D02DBFA7EF002388CF /* RequestXRPermissionsViewController.swift in Sources */,
-				7E0BF3D12DBFA7EF002388CF /* MessageController.swift in Sources */,
-				7E0BF3D22DBFA7EF002388CF /* ARKController+WorldMap.swift in Sources */,
-				7E0BF3D32DBFA7EF002388CF /* LayerView.swift in Sources */,
-				7E0BF3D42DBFA7EF002388CF /* fontController.swift in Sources */,
-				7E0BF3D52DBFA7EF002388CF /* ARKController+Frame.swift in Sources */,
-				7E0BF3D62DBFA7EF002388CF /* Prefix.swift in Sources */,
-				7E0BF3D72DBFA7EF002388CF /* ARKController+AppState.swift in Sources */,
-				7E0BF3D82DBFA7EF002388CF /* SCNNode+Show.swift in Sources */,
-				7E0BF3D92DBFA7EF002388CF /* TextInputTableViewCell.swift in Sources */,
-				7E0BF3DA2DBFA7EF002388CF /* SegmentedControlTableViewCell.swift in Sources */,
-				7E0BF3DB2DBFA7EF002388CF /* Utils.swift in Sources */,
-				7E0BF3DC2DBFA7EF002388CF /* TouchView.swift in Sources */,
-				7E0BF3DD2DBFA7EF002388CF /* ARKController.m in Sources */,
-				7E0BF3DE2DBFA7EF002388CF /* ARKController+Images.swift in Sources */,
-				7E0BF3DF2DBFA7EF002388CF /* ShaderTypes.swift in Sources */,
-				7E0BF3E02DBFA7EF002388CF /* Reachability.swift in Sources */,
-				7E0BF3E12DBFA7EF002388CF /* BarView.swift in Sources */,
-				7E0BF3E22DBFA7EF002388CF /* ARSCNView+HitTest.swift in Sources */,
-				7E0BF3E32DBFA7EF002388CF /* FocusNode.swift in Sources */,
-				7E0BF3E42DBFA7EF002388CF /* SettingsViewController.swift in Sources */,
-				7E0BF3E52DBFA7EF002388CF /* AppState.swift in Sources */,
-				7E0BF3E62DBFA7EF002388CF /* ARKSceneKitController.swift in Sources */,
-				7E0BF3E72DBFA7EF002388CF /* PlaneNode.swift in Sources */,
-				7E0BF3E82DBFA7EF002388CF /* SwitchInputTableViewCell.swift in Sources */,
-				7E0BF3E92DBFA7EF002388CF /* AnchorNode.swift in Sources */,
-				7E0BF3EA2DBFA7EF002388CF /* AppStateController.swift in Sources */,
-				7E0BF3EB2DBFA7EF002388CF /* UIOverlayController.swift in Sources */,
-				7E0BF3EC2DBFA7EF002388CF /* ViewController+MessagePanel.swift in Sources */,
-				7E0BF3ED2DBFA7EF002388CF /* OverlayViewController.swift in Sources */,
-				7E0BF3EE2DBFA7EF002388CF /* TextTableViewCell.swift in Sources */,
-				7E0BF3EF2DBFA7EF002388CF /* Animator.swift in Sources */,
-				7E0BF3F02DBFA7EF002388CF /* ViewController.swift in Sources */,
-				7E0BF3F12DBFA7EF002388CF /* WebController.swift in Sources */,
-				7E0BF3F22DBFA7EF002388CF /* ARKMetalController.swift in Sources */,
-				7E0BF3F32DBFA7EF002388CF /* ARKController+Camera.swift in Sources */,
-				7E0BF3F42DBFA7EF002388CF /* AnalyticsManager.swift in Sources */,
-				7E0BF3F52DBFA7EF002388CF /* RequestPermissionsViewController.swift in Sources */,
-				7E0BF3F62DBFA7EF002388CF /* LocationManager.swift in Sources */,
-				7E0BF3F72DBFA7EF002388CF /* Constants.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -851,6 +701,7 @@
 		};
 		041503DE1F28944F00887400 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 22B144FA69E179E03232D1EB /* Pods-iQ3ConnectXRViewer.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
@@ -886,6 +737,7 @@
 		};
 		041503DF1F28944F00887400 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = E6428B351B448E51F2B1F807 /* Pods-iQ3ConnectXRViewer.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
@@ -918,79 +770,10 @@
 			};
 			name = Release;
 		};
-		7E0BF40C2DBFA7EF002388CF /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"COCOAPODS=1",
-					"SEND_PLANES_BY_DEFAULT=0",
-				);
-				INFOPLIST_FILE = "iQ3ConnectXRViewer copy-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";
-				IPHONEOS_DEPLOYMENT_TARGET = 17;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 6;
-				OTHER_CFLAGS = "-DCOREVIDEO_SILENCE_GL_DEPRECATION";
-				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" -D USE_ANALYTICS";
-				PRODUCT_BUNDLE_IDENTIFIER = iq3.ios.iQ3ConnectXRViewer;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "XRViewer/Resources/XRViewer-Bridging-Header.h";
-				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = Debug;
-		};
-		7E0BF40D2DBFA7EF002388CF /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"$(inherited)",
-					"COCOAPODS=1",
-					"SEND_PLANES_BY_DEFAULT=0",
-				);
-				INFOPLIST_FILE = "iQ3ConnectXRViewer copy-Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";
-				IPHONEOS_DEPLOYMENT_TARGET = 17;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 6;
-				OTHER_CFLAGS = "-DCOREVIDEO_SILENCE_GL_DEPRECATION";
-				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" -D USE_ANALYTICS";
-				PRODUCT_BUNDLE_IDENTIFIER = iq3.ios.iQ3ConnectXRViewer;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator xros xrsimulator";
-				SUPPORTS_MACCATALYST = NO;
-				SWIFT_OBJC_BRIDGING_HEADER = "XRViewer/Resources/XRViewer-Bridging-Header.h";
-				SWIFT_VERSION = 4.2;
-				TARGETED_DEVICE_FAMILY = "1,2,7";
-				XROS_DEPLOYMENT_TARGET = 2.0;
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		041503BC1F28944F00887400 /* Build configuration list for PBXProject "iQ3ConnectXRViewerVisionOS" */ = {
+		041503BC1F28944F00887400 /* Build configuration list for PBXProject "iQ3ConnectXRViewer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				041503DB1F28944F00887400 /* Debug */,
@@ -999,20 +782,11 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		041503DD1F28944F00887400 /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewerVisionOS" */ = {
+		041503DD1F28944F00887400 /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewer" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				041503DE1F28944F00887400 /* Debug */,
 				041503DF1F28944F00887400 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		7E0BF40B2DBFA7EF002388CF /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewerVisionOS copy" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				7E0BF40C2DBFA7EF002388CF /* Debug */,
-				7E0BF40D2DBFA7EF002388CF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

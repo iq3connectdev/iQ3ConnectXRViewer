@@ -1,6 +1,6 @@
 import UIKit
 import CoreLocation
-import CocoaLumberjack
+//import CocoaLumberjack
 //import GCDWebServer
 
 /**
@@ -72,10 +72,10 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 
 
         /// Swipe from edge gesture recognizer setup
-        let gestureRecognizer = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(ViewController.swipe(fromEdge:)))
-        gestureRecognizer.edges = .top
-        gestureRecognizer.delegate = self
-        view.addGestureRecognizer(gestureRecognizer)
+        //let gestureRecognizer = UIScreenEdgePanGestureRecognizer(target: self, action: #selector(ViewController.swipe(fromEdge:)))
+//        gestureRecognizer.edges = .top
+//        gestureRecognizer.delegate = self
+//        view.addGestureRecognizer(gestureRecognizer)
 
         let swipeGestureRecognizer = UISwipeGestureRecognizer(target: self, action: #selector(ViewController.swipeUp(_:)))
         swipeGestureRecognizer.direction = .up
