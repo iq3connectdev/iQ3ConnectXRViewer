@@ -806,6 +806,65 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
             contentController.addUserScript(userScript)
         }
+        
+        let windowOpenOverride = """
+            (function() {
+                const originalOpen = window.open;
+                window.open = function(url, target, options) {
+                    if (typeof webkit !== 'undefined' && webkit.messageHandlers) {
+                        if(url) {
+                            window.location.href = url;
+                        }
+                        return {
+                            closed: false,
+                            close: function() {},
+                            focus: function() {},
+                            blur: function() {},
+                            location: { href: url }
+                        };
+                    }
+                    return originalOpen.call(this, url, target, options);
+                };
+
+                function setupLinkOverrides() {
+                    document.addEventListener('click', function(event) {
+                        const link = event.target.closest('a');
+                        if (!link || !link.href) return;
+                        
+                        const shouldOverride = (
+                            link.target === '_blank' || 
+                            link.target === '_new' ||
+                            event.ctrlKey || 
+                            event.metaKey || 
+                            event.button === 1
+                        );
+                        
+                        if (shouldOverride && typeof webkit !== 'undefined' && webkit.messageHandlers) {
+                            event.preventDefault();
+                            window.location.href = link.href;
+                            return false;
+                        }
+                    }, true);
+
+                    document.addEventListener('submit', function(event) {
+                        const form = event.target;
+                        if (form.target === '_blank' && typeof webkit !== 'undefined' && webkit.messageHandlers) {
+                            form.target = '_self';
+                        }
+                    }, true);
+                }
+                
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', setupLinkOverrides);
+                } else {
+                    setupLinkOverrides();
+                }
+            })();
+        """
+        
+        let windowOpenScript = WKUserScript(source: windowOpenOverride, injectionTime: .atDocumentStart, forMainFrameOnly: true);
+        contentController.addUserScript(windowOpenScript);
+        
         conf.userContentController = contentController
         self.contentController = contentController
 
