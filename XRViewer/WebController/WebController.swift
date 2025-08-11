@@ -794,9 +794,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         conf.applicationNameForUserAgent = " Mobile WebXRViewer/" + version
 
         let standardUserDefaults = UserDefaults.standard
+        let scriptBundle = Bundle(for: WebController.self)
+        
         // Check if we are supposed to be exposing WebXR.
         if standardUserDefaults.bool(forKey: Constant.exposeWebXRAPIKey()) {
-            let scriptBundle = Bundle(for: WebController.self)
             let scriptURL = scriptBundle.path(forResource: "webxr", ofType: "js")
             let scriptContent = try? String(contentsOfFile: scriptURL ?? "", encoding: .utf8)
 
@@ -807,63 +808,15 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             contentController.addUserScript(userScript)
         }
         
-        let windowOpenOverride = """
-            (function() {
-                const originalOpen = window.open;
-                window.open = function(url, target, options) {
-                    if (typeof webkit !== 'undefined' && webkit.messageHandlers) {
-                        if(url) {
-                            window.location.href = url;
-                        }
-                        return {
-                            closed: false,
-                            close: function() {},
-                            focus: function() {},
-                            blur: function() {},
-                            location: { href: url }
-                        };
-                    }
-                    return originalOpen.call(this, url, target, options);
-                };
+        /// opening new tab function override
+        let userScriptURL = scriptBundle.path(forResource: "userScript", ofType: "js")
+        let userScriptContent = try? String(contentsOfFile: userScriptURL ?? "", encoding: .utf8)
 
-                function setupLinkOverrides() {
-                    document.addEventListener('click', function(event) {
-                        const link = event.target.closest('a');
-                        if (!link || !link.href) return;
-                        
-                        const shouldOverride = (
-                            link.target === '_blank' || 
-                            link.target === '_new' ||
-                            event.ctrlKey || 
-                            event.metaKey || 
-                            event.button === 1
-                        );
-                        
-                        if (shouldOverride && typeof webkit !== 'undefined' && webkit.messageHandlers) {
-                            event.preventDefault();
-                            window.location.href = link.href;
-                            return false;
-                        }
-                    }, true);
+        print(String(format: "size of userScript.js: %ld", userScriptContent?.count ?? 0))
 
-                    document.addEventListener('submit', function(event) {
-                        const form = event.target;
-                        if (form.target === '_blank' && typeof webkit !== 'undefined' && webkit.messageHandlers) {
-                            form.target = '_self';
-                        }
-                    }, true);
-                }
-                
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', setupLinkOverrides);
-                } else {
-                    setupLinkOverrides();
-                }
-            })();
-        """
-        
-        let windowOpenScript = WKUserScript(source: windowOpenOverride, injectionTime: .atDocumentStart, forMainFrameOnly: true);
-        contentController.addUserScript(windowOpenScript);
+        let userScript = WKUserScript(source: userScriptContent ?? "", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+
+        contentController.addUserScript(userScript)
         
         conf.userContentController = contentController
         self.contentController = contentController
