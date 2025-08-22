@@ -794,9 +794,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         conf.applicationNameForUserAgent = " Mobile WebXRViewer/" + version
 
         let standardUserDefaults = UserDefaults.standard
+        let scriptBundle = Bundle(for: WebController.self)
+        
         // Check if we are supposed to be exposing WebXR.
         if standardUserDefaults.bool(forKey: Constant.exposeWebXRAPIKey()) {
-            let scriptBundle = Bundle(for: WebController.self)
             let scriptURL = scriptBundle.path(forResource: "webxr", ofType: "js")
             let scriptContent = try? String(contentsOfFile: scriptURL ?? "", encoding: .utf8)
 
@@ -806,6 +807,17 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
             contentController.addUserScript(userScript)
         }
+        
+        /// opening new tab function override
+        let userScriptURL = scriptBundle.path(forResource: "userScript", ofType: "js")
+        let userScriptContent = try? String(contentsOfFile: userScriptURL ?? "", encoding: .utf8)
+
+        print(String(format: "size of userScript.js: %ld", userScriptContent?.count ?? 0))
+
+        let userScript = WKUserScript(source: userScriptContent ?? "", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+
+        contentController.addUserScript(userScript)
+        
         conf.userContentController = contentController
         self.contentController = contentController
 

@@ -55,27 +55,28 @@
 
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 2rem;
             justify-content: center;
-            padding: 2rem;
+            padding: 2rem 25% 0 25%;
             text-align: center;
         }
 
         .card-container {
             display: flex;
+            width: 80px;
             flex-direction: column;
             align-items: center;
         }
 
         .card {
             background: #ffffff;
-            width: 100px;
-            height: 100px;
+            width: 80px;
+            height: 80px;
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 16px; /* Ensures rounded corners */
+            border-radius: 16px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             cursor: pointer;
             transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -89,8 +90,9 @@
 
         .card img {
             height: 100%;
-            object-fit: contain;
-            border-radius: 16px; /* Optional: If logos also need a soft rounded feel */
+            width: 100%;
+            object-fit: fill;
+            border-radius: 16px;
         }
 
         .card-title {
@@ -99,9 +101,23 @@
             color: #ffffff;
             margin-top: 8px;
         }
-
+        
+        @media (min-width: 768px) {
+            .card {
+                width: 120px;
+                height: 120px;
+            }
+            
+            .card-container {
+                width: 150px;
+            }
+            .card-title {
+                font-size: 1rem;
+            }
+        }
+        
     .card-description {
-        color: #dbeafe; /* Soft blue for better contrast */
+        color: #dbeafe;
         font-size: 0.9rem;
     }
 
@@ -115,10 +131,24 @@
 
 <div class="grid">
     <div class="card-container">
-        <div class="card" onclick="navigateTo('https://qa.iq3connect.com:4499/api/meeting-template/public-launch?id=67c6bcd28e0ee524c8553110')">
+        <div class="card" onclick="navigateTo('https://iq3connect.com/xr')">
+            <img src="ARDemo_icon.png" alt="Mozilla WebXR">
+        </div>
+        <p class="card-title">iQ3 AR Demo</p>
+    </div>
+    
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://web.iq3connect.com')">
             <img src="logo.png" alt="Mozilla WebXR">
         </div>
-        <p class="card-title">iQ3Connect</p>
+        <p class="card-title">iQ3 Account</p>
+    </div>
+    
+    <div class="card-container">
+        <div class="card" onclick="navigateTo('https://iq3connect.com/try-free')">
+            <img src="freeTrial_icon.png" alt="Mozilla WebXR">
+        </div>
+        <p class="card-title">iQ3 Free Trial</p>
     </div>
 
     <div class="card-container">
