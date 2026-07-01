@@ -1,20 +1,23 @@
 @objc extension ARKController {
     
     func createReferenceImage(fromDictionary referenceImageDictionary: [AnyHashable: Any]) -> ARReferenceImage? {
-        let physicalWidth: CGFloat = referenceImageDictionary["physicalWidth"] as? CGFloat ?? 0
-        let b64String = referenceImageDictionary["buffer"] as? String
-        let width = size_t(referenceImageDictionary["imageWidth"] as? Int ?? 0)
-        let height = size_t(referenceImageDictionary["imageHeight"] as? Int ?? 0)
+        
+        let width         = size_t((referenceImageDictionary["imageWidth"]  as? NSNumber)?.intValue    ?? (referenceImageDictionary["imageWidth"]  as? Int    ?? 0))
+        let height        = size_t((referenceImageDictionary["imageHeight"] as? NSNumber)?.intValue    ?? (referenceImageDictionary["imageHeight"] as? Int    ?? 0))
+        let physicalWidth = CGFloat((referenceImageDictionary["physicalWidth"] as? NSNumber)?.doubleValue ?? (referenceImageDictionary["physicalWidth"] as? Double ?? 0))
+        let b64String     = referenceImageDictionary["buffer"] as? String
+
         let bitsPerComponent: size_t = 8
         let bitsPerPixel: size_t = 32
         let bytesPerRow = size_t(width * 4)
+
         guard let colorSpace = CGColorSpace(name: CGColorSpace.sRGB) else { return nil }
-        let bitmapInfo = CGBitmapInfo(rawValue: 0)
+
+        let bitmapInfo = CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue)
+
         guard let data = Data(base64Encoded: b64String ?? "", options: .ignoreUnknownCharacters) else { return nil }
-        let bridgedData = data as CFData
-        guard let dataProvider = CGDataProvider.init(data: bridgedData) else { return nil }
-        let shouldInterpolate = true
-        
+        guard let dataProvider = CGDataProvider(data: data as CFData) else { return nil }
+
         let cgImage = CGImage(width: width,
                               height: height,
                               bitsPerComponent: bitsPerComponent,
@@ -24,14 +27,13 @@
                               bitmapInfo: bitmapInfo,
                               provider: dataProvider,
                               decode: nil,
-                              shouldInterpolate: shouldInterpolate,
+                              shouldInterpolate: true,
                               intent: CGColorRenderingIntent.defaultIntent)
-        var result: ARReferenceImage? = nil
-        if cgImage != nil {
-            result = ARReferenceImage(cgImage!, orientation: .up, physicalWidth: physicalWidth)
-            result?.name = referenceImageDictionary["uid"] as? String
-        }
-        
+
+        guard let cgImage = cgImage else { return nil }
+
+        let result = ARReferenceImage(cgImage, orientation: .up, physicalWidth: physicalWidth)
+        result.name = referenceImageDictionary["uid"] as? String
         return result
     }
     

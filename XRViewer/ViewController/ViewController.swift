@@ -1,6 +1,7 @@
 import UIKit
 import CoreLocation
 import CocoaLumberjack
+import WebKit
 //import GCDWebServer
 
 /**
@@ -22,6 +23,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
     lazy var stateController: AppStateController = AppStateController(state: AppState.defaultState())
     var arkController: ARKController?
     var webController: WebController?
+    var tabManager = TabManager()
+    /// Cap on simultaneously-live tabs (each holds a WKWebView; many + AR is heavy on iPad).
+    private let maxLiveTabs = 10
     var overlayController: UIOverlayController?
     private var locationManager: LocationManager?
     var messageController: MessageController?
@@ -203,8 +207,8 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         // If XR is active, then the top anchor is 0 (fullscreen), else topSafeAreaInset + Constant.urlBarHeight()
 //        let topSafeAreaInset = UIApplication.shared.keyWindow?.safeAreaInsets.top ?? 0.0
         let topSafeAreaInset = view.safeAreaInsets.top;
-        barViewHeight.constant = topSafeAreaInset + Constant.urlBarHeight()
-        webViewTop.constant = webXR ? 0.0 : topSafeAreaInset + Constant.urlBarHeight()
+        barViewHeight.constant = topSafeAreaInset + Constant.tabStripHeight() + Constant.urlBarHeight()
+        webViewTop.constant = webXR ? 0.0 : topSafeAreaInset + Constant.tabStripHeight() + Constant.urlBarHeight()
         print("\n--  \(barViewHeight.constant), \(webViewTop.constant),  \(topSafeAreaInset)")
         webViewLeft.constant = 0.0
         webViewRight.constant = 0.0
@@ -485,6 +489,7 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         weak var blockSelf: ViewController? = self
 
         NotificationCenter.default.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: OperationQueue.main, using: { note in
+            blockSelf?.saveTabs()
             blockSelf?.arkController?.controller.previewingSinglePlane = false
             blockSelf?.chooseSinglePlaneButton.isHidden = true
             var arSessionState: ARKitSessionState
@@ -689,6 +694,35 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         if !ARKController.supportsARFaceTrackingConfiguration() {
             webController?.hideCameraFlipButton()
         }
+
+        
+        tabManager.delegate = self
+        if let initialWebView = webController?.webView {
+            tabManager.resetToSingleTab(Tab(webView: initialWebView))
+        }
+
+        // Wire the persistent tab strip.
+        webController?.tabStripView?.onSelectTab = { tab in
+            if tab === blockSelf?.tabManager.selectedTab { return }
+            blockSelf?.confirmClosingARIfNeeded {
+                blockSelf?.tabManager.selectTab(tab)
+                blockSelf?.saveTabs()
+            }
+        }
+        webController?.tabStripView?.onCloseTab = { tab in
+            blockSelf?.closeTab(tab)
+        }
+        webController?.tabStripView?.onNewTab = {
+            blockSelf?.confirmClosingARIfNeeded { blockSelf?.openNewTab() }
+        }
+        webController?.tabStripView?.onReorderTab = { from, to in
+            blockSelf?.tabManager.moveTab(from: from, to: to)
+            blockSelf?.saveTabs()
+        }
+        webController?.onTabsButtonTapped = {
+            blockSelf?.presentTabList()
+        }
+        refreshTabStrip()
         webController?.animator = animator
         webController?.onStartLoad = {
             if blockSelf?.arkController != nil {
@@ -718,8 +752,13 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         }
 
         webController?.onFinishLoad = {
-            //         [blockSelf hideSplashWithCompletion:^
-            //          { }];
+            // Persist tabs and refresh the strip whenever the active page finishes loading (its URL
+            // and title have settled); also fetch the page's favicon.
+            blockSelf?.saveTabs()
+            blockSelf?.refreshTabStrip()
+            if let active = blockSelf?.tabManager.selectedTab {
+                blockSelf?.fetchFavicon(for: active)
+            }
         }
 
         webController?.onInitAR = { uiOptionsDict in
@@ -826,6 +865,32 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             blockSelf?.present(navigationController, animated: true)
         }
 
+        webController?.onQRScanTapped = {
+            let scanner = QRScannerViewController()
+            scanner.modalPresentationStyle = .fullScreen
+            scanner.onCodeScanned = { code in
+                blockSelf?.loadURL(code)
+            }
+            blockSelf?.webController?.hideKeyboard()
+            blockSelf?.present(scanner, animated: true)
+        }
+
+        webController?.onBookmarksListTapped = {
+            let bookmarksVC = BookmarksViewController()
+            let navigationController = UINavigationController(rootViewController: bookmarksVC)
+            bookmarksVC.onSelect = { url in
+                blockSelf?.loadURL(url)
+            }
+            blockSelf?.webController?.hideKeyboard()
+            blockSelf?.present(navigationController, animated: true)
+        }
+
+        webController?.onOpenInNewTab = { url in
+            blockSelf?.confirmClosingARIfNeeded {
+                blockSelf?.openNewTab(url: url)
+            }
+        }
+
         webController?.onComputerVisionDataRequested = {
             blockSelf?.stateController.state.computerVisionFrameRequested = true
             blockSelf?.arkController?.computerVisionFrameRequested = true
@@ -900,6 +965,8 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             if requestedURL != nil && requestedURL != "" {
                 UserDefaults.standard.set(nil, forKey: REQUESTED_URL_KEY)
                 webController?.loadURL(requestedURL)
+            } else if restoreSavedTabs() {
+                // Restored the tab set (URLs + selection) from the previous launch.
             } else {
                 let lastURL = UserDefaults.standard.string(forKey: LAST_URL_KEY)
                 if lastURL == nil || lastURL?.contains(HOMEPAGE_NAME) == true {
@@ -1118,6 +1185,146 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         stateController.setWebXR(false)
     }
 
+    func confirmClosingARIfNeeded(then action: @escaping () -> Void) {
+        guard stateController.state.webXR else {
+            action()
+            return
+        }
+        let alert = UIAlertController(
+            title: "Close AR session?",
+            message: "Switching tabs will end the AR session in this tab. You can re-enter AR afterward.",
+            preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Close AR & Continue", style: .destructive) { _ in
+            action()
+        })
+        present(alert, animated: true)
+    }
+
+    func refreshTabStrip() {
+        webController?.tabStripView?.update(tabs: tabManager.tabs, selectedTab: tabManager.selectedTab)
+        webController?.setTabCount(tabManager.count)   // keep the tabs-button count badge in sync
+    }
+
+
+    func presentTabList() {
+        weak var blockSelf: ViewController? = self
+        let listVC = TabListViewController()
+        listVC.tabs = tabManager.tabs
+        listVC.selectedTab = tabManager.selectedTab
+        listVC.onSelectTab = { tab in
+            if tab === blockSelf?.tabManager.selectedTab { return }
+            blockSelf?.confirmClosingARIfNeeded {
+                blockSelf?.tabManager.selectTab(tab)
+                blockSelf?.saveTabs()
+            }
+        }
+        listVC.onNewTab = {
+            blockSelf?.confirmClosingARIfNeeded { blockSelf?.openNewTab() }
+        }
+        listVC.onCloseTab = { tab in
+            blockSelf?.closeTab(tab)
+        }
+        let navigationController = UINavigationController(rootViewController: listVC)
+        webController?.hideKeyboard()
+        present(navigationController, animated: true)
+    }
+
+    /// Fetch a favicon for the tab strip (via Google's favicon service) and refresh the strip.
+    func fetchFavicon(for tab: Tab) {
+        guard let urlString = tab.urlString,
+              let host = URL(string: urlString)?.host,
+              let faviconURL = URL(string: "https://www.google.com/s2/favicons?sz=64&domain=\(host)") else { return }
+        URLSession.shared.dataTask(with: faviconURL) { [weak self] data, _, _ in
+            guard let data = data, let image = UIImage(data: data) else { return }
+            DispatchQueue.main.async {
+                tab.favicon = image
+                self?.refreshTabStrip()
+            }
+        }.resume()
+    }
+
+    func openNewTab(url: String? = nil) {
+        guard let newWebView = webController?.makeWebView() else { return }
+        tabManager.addTab(Tab(webView: newWebView), select: true)
+        if let url = url, !url.isEmpty {
+            webController?.loadURL(url)
+        } else {
+            webController?.goHome()
+        }
+        evictOldestTabIfOverLimit()
+        refreshTabStrip()
+        saveTabs()
+    }
+
+    private func evictOldestTabIfOverLimit() {
+        guard tabManager.count > maxLiveTabs else { return }
+        let victim = tabManager.tabs
+            .filter { $0 !== tabManager.selectedTab }
+            .min(by: { $0.lastAccessed < $1.lastAccessed })
+        guard let victim = victim else { return }
+        let victimWebView = victim.webView
+        tabManager.removeTab(victim)
+        victimWebView?.stopLoading()
+        victim.webView = nil
+    }
+
+    func saveTabs() {
+        let urls = tabManager.tabs.map { tab -> String in
+            let u = tab.urlString ?? ""
+            return u.contains(HOMEPAGE_NAME) ? "" : u   // store homepage as empty
+        }
+        TabPersistence.save(urls: urls, selectedIndex: tabManager.selectedIndex)
+    }
+
+    @discardableResult
+    func restoreSavedTabs() -> Bool {
+        guard let saved = TabPersistence.load() else { return false }
+
+        // Tab 0 reuses the initial web view created by WebController; make it lazy too.
+        guard let firstTab = tabManager.selectedTab else { return false }
+        firstTab.pendingURL = saved.urls[0]
+
+        if saved.urls.count > 1 {
+            for i in 1..<saved.urls.count {
+                guard let wv = webController?.makeWebView() else { continue }
+                let tab = Tab(webView: wv)
+                tab.pendingURL = saved.urls[i]
+                tabManager.addTab(tab)
+            }
+        }
+
+        let targetIndex = min(max(0, saved.selectedIndex), tabManager.tabs.count - 1)
+        let targetTab = tabManager.tabs[targetIndex]
+        if targetTab === tabManager.selectedTab {
+            loadPendingIfNeeded(for: targetTab)          // target already active → load directly
+        } else {
+            tabManager.selectTab(targetTab)              // delegate swaps it in + loads its pending URL
+        }
+        refreshTabStrip()
+        return true
+    }
+
+    func loadPendingIfNeeded(for tab: Tab) {
+        guard let pending = tab.pendingURL else { return }
+        tab.pendingURL = nil
+        if let webView = tab.webView {
+            webController?.load(urlString: pending, into: webView)
+        }
+    }
+
+    func closeTab(_ tab: Tab) {
+        let closedWebView = tab.webView
+        tabManager.removeTab(tab)
+        closedWebView?.stopLoading()
+        tab.webView = nil
+        if tabManager.count == 0 {
+            openNewTab()
+        }
+        refreshTabStrip()
+        saveTabs()
+    }
+
     func handleOnWatchAR(withRequest request: [AnyHashable : Any], initialLoad: Bool, grantedPermissionsBlock: ResultBlock?) {
         weak var blockSelf: ViewController? = self
 
@@ -1282,6 +1489,25 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             axis = NSLayoutConstraint.Axis.vertical
         }
         messageController?.requestXRPermissionsVC?.stackView?.axis = axis
+    }
+}
+
+extension ViewController: TabManagerDelegate {
+    func tabManager(_ manager: TabManager, didSelect tab: Tab?, previous: Tab?) {
+        guard let webView = tab?.webView else { return }
+        
+        if webController?.webView === webView { return }
+
+        // Single-AR model: switching tabs exits any running AR session.
+        if stateController.state.webXR {
+            webController?.userStoppedAR()
+            stateController.setWebXR(false)
+        }
+
+        webController?.switchToWebView(webView)
+        updateConstraints()
+        if let tab = tab { loadPendingIfNeeded(for: tab) }
+        refreshTabStrip()
     }
 }
 

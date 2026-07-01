@@ -32,6 +32,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     @objc var onResetTrackingButtonTapped: (() -> Void)?
     @objc var onSwitchCameraButtonTapped: (() -> Void)?
     @objc var onShowPermissions: (() -> Void)?
+    @objc var onQRScanTapped: (() -> Void)?
+    @objc var onBookmarksListTapped: (() -> Void)?
+    @objc var onTabsButtonTapped: (() -> Void)?
+    @objc var onOpenInNewTab: ((String) -> Void)?
     @objc var onStartSendingComputerVisionData: (() -> Void)?
     @objc var onStopSendingComputerVisionData: (() -> Void)?
     var onSetNumberOfTrackedImages: ((Int) -> Void)?
@@ -47,6 +51,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     @objc weak var webViewTopAnchorConstraint: NSLayoutConstraint?
     @objc var webViewLeftAnchorConstraint: NSLayoutConstraint?
     @objc var webViewRightAnchorConstraint: NSLayoutConstraint?
+    var webViewBottomAnchorConstraint: NSLayoutConstraint?
     @objc var lastXRVisitedURL = ""
 
     @objc func hideCameraFlipButton() {
@@ -58,19 +63,25 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     private var transferCallback = ""
     @objc var lastURL = ""
     weak var barView: BarView?
+    var tabStripView: TabStripView?
     private weak var barViewTopAnchorConstraint: NSLayoutConstraint?
     private var documentReadyState = ""
-    
+    /// One process pool shared by all tabs so they share the web-content session (cookies/login).
+    private static let sharedProcessPool = WKProcessPool()
+    /// The web view we currently KVO-observe for estimatedProgress (kept balanced via the helpers).
+    private weak var progressObservedWebView: WKWebView?
+
     @objc init(rootView: UIView?) {
         super.init()
         
-        setupWebView(withRootView: rootView)
-        setupWebContent()
-        setupWebUI()
+        self.rootView = rootView
+        let webView = makeWebView()
+        attachWebView(webView)
         setupBarView()
     }
     
     deinit {
+        stopObservingProgress()
         DDLogDebug("WebController dealloc")
     }
 
@@ -97,6 +108,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 //        }
 
         if theUrl?.contains(".") == false && theUrl?.lowercased().contains("localhost") == false {
+            BrowserDataStore.shared.recordSearch(theUrl)
             let query = theUrl?.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
             let searchURLString = "https://www.google.com/search?q=\(query)"
             url = URL(string: searchURLString)
@@ -129,6 +141,17 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         onError?(nil)
     }
 
+    @objc func load(urlString: String?, into webView: WKWebView) {
+        if let urlString = urlString, !urlString.isEmpty, !urlString.contains(HOMEPAGE_NAME),
+           let url = URL(string: urlString) {
+            webView.load(URLRequest(url: url))
+        } else if let homepage = Bundle.main.url(forResource: "homepage", withExtension: "html") {
+            webView.load(URLRequest(url: homepage))
+        } else if let fallback = URL(string: WEB_URL) {
+            webView.load(URLRequest(url: fallback))
+        }
+    }
+
     @objc func prefillLastURL() {
         barView?.urlField.text = UserDefaults.standard.string(forKey: LAST_URL_KEY)
     }
@@ -136,6 +159,13 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     @objc func reload() {
         let url = (barView?.urlFieldText()?.count ?? 0) > 0 ? barView?.urlFieldText() : lastURL
         loadURL(url)
+    }
+
+    /// Add or remove the currently displayed page from bookmarks and update the bar's star.
+    func toggleBookmarkForCurrentPage() {
+        guard let url = webView?.url?.absoluteString, !url.isEmpty, !url.contains(HOMEPAGE_NAME) else { return }
+        let nowBookmarked = BrowserDataStore.shared.toggleBookmark(url: url, title: webView?.title)
+        barView?.setBookmarked(nowBookmarked)
     }
 
     @objc func clean() {
@@ -153,7 +183,9 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 //            self.barView?.setDebugVisible(webXR)
 //            self.barView?.setRestartTrackingVisible(webXR)
             self.barView?.setSwitchCameraVisible(webXR)
-            let webViewTopAnchorConstraintConstant: Float = webXR ? 0.0 : Float(Constant.urlBarHeight())
+            // ARKit owns the camera during an AR session — disable QR scanning then.
+            self.barView?.setQRScanEnabled(!webXR)
+            let webViewTopAnchorConstraintConstant: Float = webXR ? 0.0 : Float(Constant.urlBarHeight() + Constant.tabStripHeight())
             self.webViewTopAnchorConstraint?.constant = CGFloat(webViewTopAnchorConstraintConstant)
             self.webView?.superview?.setNeedsLayout()
             self.webView?.superview?.layoutIfNeeded()
@@ -217,6 +249,14 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         barView?.hideKeyboard()
     }
 
+    @objc func setTabCount(_ count: Int) {
+        tabStripView?.setTabCount(count)
+    }
+
+    @objc func userStoppedAR() {
+        callWebMethod(WEB_AR_IOS_USERSTOPPED_AR, param: "", webCompletion: nil)
+    }
+
     @objc func didReceiveError(error: NSError) {
         let errorDictionary = [WEB_AR_IOS_ERROR_DOMAIN_PARAMETER: error.domain, WEB_AR_IOS_ERROR_CODE_PARAMETER: error.code, WEB_AR_IOS_ERROR_MESSAGE_PARAMETER: error.localizedDescription] as [String : Any]
         callWebMethod(WEB_AR_IOS_ERROR_MESSAGE, paramJSON: errorDictionary, webCompletion: debugCompletion(name: WEB_AR_IOS_ERROR_MESSAGE))
@@ -246,6 +286,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
     @objc func userGrantedWebXRAuthorizationState(_ access: WebXRAuthorizationState) {
         barView?.permissionLevelButton?.isEnabled = true
+        barView?.urlField.leftViewMode = .unlessEditing
         switch access {
         case .videoCameraAccess:
             let image = UIImage(named: "camera")
@@ -275,6 +316,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         case .notDetermined:
             barView?.permissionLevelButton?.setImage(nil, for: .normal)
             barView?.permissionLevelButton?.isEnabled = false
+            barView?.urlField.leftViewMode = .never   // hide the empty left view during normal browsing
         }
         
         // This may change, in one of two ways:
@@ -321,6 +363,11 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         //DDLogDebug(@"Received message: %@ , body: %@", [message name], [message body]);
 
         weak var blockSelf: WebController? = self
+        // Multi-tab: ignore messages from any web view that isn't the active tab, so a backgrounded
+        // tab's page can't drive AR / navigation on the foreground tab.
+        if let messageWebView = message.webView, messageWebView !== self.webView {
+            return
+        }
         guard let messageBody = message.body as? [String: Any] else { return }
         print(message.name)
         if message.name == WEB_AR_INIT_MESSAGE {
@@ -508,6 +555,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
            if let urlString = messageBody["url"] as? String {
                 loadURL(urlString)
             }
+        } else if message.name == WEB_AR_OPEN_NEW_TAB_MESSAGE {
+            if let urlString = messageBody["url"] as? String, !urlString.isEmpty {
+                onOpenInNewTab?(urlString)
+            }
         } else {
             DDLogError("Unknown message: \(message.body) ,for name: \(message.name)")
         }
@@ -542,20 +593,19 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     // MARK: WKUIDelegate, WKNavigationDelegate
 
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
-        if let navigation = navigation {
-            DDLogDebug("didStartProvisionalNavigation - \(navigation.debugDescription)\n on thread \(Thread.current.description)")
-        }
+        
+        guard webView === self.webView else { return }
 
-        self.webView?.addObserver(self as NSObject, forKeyPath: "estimatedProgress", options: .new, context: nil)
+        startObservingProgress(on: webView)
         documentReadyState = ""
 
         onStartLoad?()
 
-        barView?.startLoading(self.webView?.url?.absoluteString)
-        barView?.setBackEnabled(self.webView?.canGoBack ?? false)
-        barView?.setForwardEnabled(self.webView?.canGoForward ?? false)
-        
-        if let urlString = self.webView?.url?.absoluteString, urlString.contains(HOMEPAGE_NAME) {
+        barView?.startLoading(webView.url?.absoluteString)
+        barView?.setBackEnabled(webView.canGoBack)
+        barView?.setForwardEnabled(webView.canGoForward)
+
+        if let urlString = webView.url?.absoluteString, urlString.contains(HOMEPAGE_NAME) {
             barView?.urlField.text = ""
         }
     }
@@ -575,43 +625,45 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        guard webView === self.webView else { return }
         DDLogError("Web Error - \(error)")
 
-        if self.webView?.observationInfo != nil {
-            self.webView?.removeObserver(self, forKeyPath: "estimatedProgress")
-        } else {
-            print("No Observers Found on WebView in WebController didFailProvisionalNavigation Check")
-        }
+        stopObservingProgress()
 
         if shouldShowError(error: error as NSError) {
             onError?(error)
         }
 
-        barView?.finishLoading(self.webView?.url?.absoluteString)
-        barView?.setBackEnabled(self.webView?.canGoBack ?? false)
-        barView?.setForwardEnabled(self.webView?.canGoForward ?? false)
+        barView?.finishLoading(webView.url?.absoluteString)
+        barView?.setBackEnabled(webView.canGoBack)
+        barView?.setForwardEnabled(webView.canGoForward)
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        guard webView === self.webView else { return }
         DDLogError("Web Error - \(error)")
 
-        if self.webView?.observationInfo != nil {
-            self.webView?.removeObserver(self as NSObject, forKeyPath: "estimatedProgress")
-        } else {
-            print("No Observers Found on WebView in WebController didFail Check")
-        } 
+        stopObservingProgress()
 
         if shouldShowError(error: error as NSError) {
             onError?(error)
         }
 
-        barView?.finishLoading(self.webView?.url?.absoluteString)
-        barView?.setBackEnabled(self.webView?.canGoBack ?? false)
-        barView?.setForwardEnabled(self.webView?.canGoForward ?? false)
+        barView?.finishLoading(webView.url?.absoluteString)
+        barView?.setBackEnabled(webView.canGoBack)
+        barView?.setForwardEnabled(webView.canGoForward)
     }
     //WKContextMenuElementInfo
     func webView(_ webView: WKWebView, shouldPreviewElement elementInfo: WKPreviewElementInfo) -> Bool {
         return false
+    }
+
+    
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if navigationAction.targetFrame == nil, let url = navigationAction.request.url {
+            onOpenInNewTab?(url.absoluteString)
+        }
+        return nil
     }
 
     // MARK: Private
@@ -630,15 +682,15 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         barView?.layoutIfNeeded()
     }
 
-    func setupWebUI() {
-        webView?.autoresizesSubviews = true
+    func configureWebUI(_ webView: WKWebView) {
+        webView.autoresizesSubviews = true
 
-        webView?.allowsLinkPreview = false
-        webView?.isOpaque = false
-        webView?.backgroundColor = UIColor.clear
-        webView?.isUserInteractionEnabled = true
-        webView?.scrollView.bounces = false
-        webView?.scrollView.bouncesZoom = false
+        webView.allowsLinkPreview = false
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor.clear
+        webView.isUserInteractionEnabled = true
+        webView.scrollView.bounces = false
+        webView.scrollView.bouncesZoom = false
     }
 
     func setupBarView() {
@@ -662,6 +714,24 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         barViewHeightAnchorConstraint?.isActive = true
 
         self.barView = barView
+
+        // Firefox-style persistent tab strip, hosted in the band above the URL-bar buttons. As a
+        // child of barView it shows/hides together with the bar (e.g. hidden during AR).
+        if let barView = barView {
+            let strip = TabStripView(frame: .zero)
+            strip.translatesAutoresizingMaskIntoConstraints = false
+            barView.addSubview(strip)
+            NSLayoutConstraint.activate([
+                strip.leadingAnchor.constraint(equalTo: barView.leadingAnchor),
+                strip.trailingAnchor.constraint(equalTo: barView.trailingAnchor),
+                strip.topAnchor.constraint(equalTo: barView.safeAreaLayoutGuide.topAnchor),
+                strip.heightAnchor.constraint(equalToConstant: Constant.tabStripHeight()),
+            ])
+            strip.onTabsButtonTapped = { [weak self] in
+                self?.onTabsButtonTapped?()
+            }
+            self.tabStripView = strip
+        }
 
         weak var blockSelf: WebController? = self
         weak var blockBar: BarView? = barView
@@ -702,6 +772,26 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             blockSelf?.loadURL(url)
         }
 
+        barView?.suggestionSelectedBlock = { url in
+            blockSelf?.loadURL(url)
+        }
+
+        barView?.qrScanActionBlock = {
+            blockSelf?.onQRScanTapped?()
+        }
+
+        barView?.bookmarkToggleActionBlock = {
+            blockSelf?.toggleBookmarkForCurrentPage()
+        }
+
+        barView?.bookmarksListActionBlock = {
+            blockSelf?.onBookmarksListTapped?()
+        }
+
+        barView?.tabsActionBlock = {
+            blockSelf?.onTabsButtonTapped?()
+        }
+
         barView?.debugButtonToggledAction = { selected in
             blockSelf?.onDebugButtonToggled?(selected)
         }
@@ -719,7 +809,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         }
     }
 
-    func setupWebContent() {
+    func addScriptMessageHandlers(to contentController: WKUserContentController?) {
         contentController?.add(self, name: WEB_AR_INIT_MESSAGE)
         contentController?.add(self, name: WEB_AR_START_WATCH_MESSAGE)
         contentController?.add(self, name: WEB_AR_REQUEST_MESSAGE)
@@ -742,6 +832,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         contentController?.add(self, name: WEB_AR_GET_WORLD_MAP_MESSAGE)
         contentController?.add(self, name: WEB_AR_SET_WORLD_MAP_MESSAGE)
         contentController?.add(self, name: LOAD_WEBPAGE_CONTENT_FROM_URL)
+        contentController?.add(self, name: WEB_AR_OPEN_NEW_TAB_MESSAGE)
     }
 
     func cleanWebContent() {
@@ -787,7 +878,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         return versionBuild
     }
 
-    func setupWebView(withRootView rootView: UIView?) {
+    func makeWebView() -> WKWebView {
         let conf = WKWebViewConfiguration()
         let contentController = WKUserContentController()
         let version = versionBuild() ?? "unknown"
@@ -819,7 +910,8 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         contentController.addUserScript(userScript)
         
         conf.userContentController = contentController
-        self.contentController = contentController
+        // Register the WebXR bridge message handlers on this web view's content controller.
+        addScriptMessageHandlers(to: contentController)
 
         // rewrite start 1
         let pref = WKPreferences()
@@ -846,7 +938,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         
         // rewrite end 1
 
-        conf.processPool = WKProcessPool()
+        conf.processPool = WebController.sharedProcessPool
 
         conf.allowsInlineMediaPlayback = true
         conf.allowsAirPlayForMediaPlayback = true
@@ -854,50 +946,97 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         conf.mediaTypesRequiringUserActionForPlayback = []
 
         let wv = WKWebView(frame: rootView?.bounds ?? CGRect.zero, configuration: conf)
-        rootView?.addSubview(wv)
         wv.translatesAutoresizingMaskIntoConstraints = false
-        wv.isInspectable = true;
-        guard let rootTopAnchor = rootView?.topAnchor else { return }
-        guard let rootBottomAnchor = rootView?.bottomAnchor else { return }
-        guard let rootLeftAnchor = rootView?.leftAnchor else { return }
-        guard let rootRightAnchor = rootView?.rightAnchor else { return }
-        
-        let webViewTopAnchorConstraint: NSLayoutConstraint = wv.topAnchor.constraint(equalTo: rootTopAnchor, constant: CGFloat(Constant.urlBarHeight()))
-        self.webViewTopAnchorConstraint = webViewTopAnchorConstraint
-        webViewTopAnchorConstraint.isActive = true
-        
-        let webViewLeftAnchorConstraint: NSLayoutConstraint = wv.leftAnchor.constraint(equalTo: rootLeftAnchor)
-        self.webViewLeftAnchorConstraint = webViewLeftAnchorConstraint
-        webViewLeftAnchorConstraint.isActive = true
-        let webViewRightAnchorConstraint: NSLayoutConstraint = wv.rightAnchor.constraint(equalTo: rootRightAnchor)
-        self.webViewRightAnchorConstraint = webViewRightAnchorConstraint
-        webViewRightAnchorConstraint.isActive = true
-
-        wv.bottomAnchor.constraint(equalTo: rootBottomAnchor).isActive = true
-
+        wv.isInspectable = true
         wv.scrollView.contentInsetAdjustmentBehavior = .never
-
         wv.navigationDelegate = self
         wv.uiDelegate = self
-        
-//        let lastURL = UserDefaults.standard.string(forKey: LAST_URL_KEY)
-        
-//        let homeURL = "webxr-viewer://home"
-//        self.lastURL = homeURL
-//        
-//        // Update the URL field in the bar view
-//        barView?.urlField.text = "Home"
-        
-//        if lastURL != nil{
-//            if lastURL != HOME_URL{
-//                loadURL(lastURL)
-//            }
-//            else {
-//                goHome()
-//            }
-//        }
-        
-        webView = wv
+        configureWebUI(wv)
+        return wv
+    }
+
+    /// Add a web view to the root container, pin it with the (swappable) top/left/right/bottom
+    /// constraints, and make it the controller's active web view. Used on init and on tab switch.
+    func attachWebView(_ webView: WKWebView) {
+        guard let rootView = rootView else { return }
+        rootView.addSubview(webView)
+        webView.translatesAutoresizingMaskIntoConstraints = false
+
+        let topConstraint = webView.topAnchor.constraint(equalTo: rootView.topAnchor, constant: CGFloat(Constant.urlBarHeight() + Constant.tabStripHeight()))
+        topConstraint.isActive = true
+        self.webViewTopAnchorConstraint = topConstraint
+
+        let leftConstraint = webView.leftAnchor.constraint(equalTo: rootView.leftAnchor)
+        leftConstraint.isActive = true
+        self.webViewLeftAnchorConstraint = leftConstraint
+
+        let rightConstraint = webView.rightAnchor.constraint(equalTo: rootView.rightAnchor)
+        rightConstraint.isActive = true
+        self.webViewRightAnchorConstraint = rightConstraint
+
+        let bottomConstraint = webView.bottomAnchor.constraint(equalTo: rootView.bottomAnchor)
+        bottomConstraint.isActive = true
+        self.webViewBottomAnchorConstraint = bottomConstraint
+
+        self.webView = webView
+        self.contentController = webView.configuration.userContentController
+
+        // If we're switching back to a tab that's still mid-load, resume progress tracking.
+        if webView.isLoading {
+            startObservingProgress(on: webView)
+        }
+
+        // Keep the URL bar in front of the newly added web view.
+        if let barView = barView {
+            rootView.bringSubviewToFront(barView)
+        }
+    }
+
+    /// Remove the current web view from the container (its constraints go with it). Used on tab
+    /// switch before attaching another tab's web view; does NOT destroy the web view.
+    func detachWebView() {
+        // Stop tracking the outgoing web view's load progress (it's going to the background).
+        stopObservingProgress()
+        webViewTopAnchorConstraint?.isActive = false
+        webViewLeftAnchorConstraint?.isActive = false
+        webViewRightAnchorConstraint?.isActive = false
+        webViewBottomAnchorConstraint?.isActive = false
+        webView?.removeFromSuperview()
+    }
+
+    /// Make `webView` the active tab's web view: detach the current one (kept alive by its Tab),
+    /// attach the new one, and sync the URL bar to it. Called on tab switch.
+    func switchToWebView(_ webView: WKWebView) {
+        guard webView !== self.webView else { return }
+        detachWebView()
+        attachWebView(webView)
+
+        let urlString = webView.url?.absoluteString
+        barView?.urlField.text = (urlString?.contains(HOMEPAGE_NAME) ?? false) ? "" : urlString
+        barView?.setBackEnabled(webView.canGoBack)
+        barView?.setForwardEnabled(webView.canGoForward)
+        barView?.setBookmarked(BrowserDataStore.shared.isBookmarked(urlString))
+        lastURL = urlString ?? ""
+    }
+
+    /// Start KVO-observing estimatedProgress on `webView`, removing any prior observation first so
+    /// add/remove always stay balanced (prevents leaks/crashes when switching tabs mid-load).
+    private func startObservingProgress(on webView: WKWebView?) {
+        guard let webView = webView else { return }
+        if progressObservedWebView === webView { return }
+        stopObservingProgress()
+        webView.addObserver(self, forKeyPath: "estimatedProgress", options: .new, context: nil)
+        progressObservedWebView = webView
+    }
+
+    /// Stop observing the currently-observed web view (if any). Returns true if it actually removed
+    /// an observer, so callers can run completion work exactly once.
+    @discardableResult
+    private func stopObservingProgress() -> Bool {
+        guard let observed = progressObservedWebView else { return false }
+        observed.removeObserver(self, forKeyPath: "estimatedProgress")
+        progressObservedWebView = nil
+        return true
     }
 
     func documentDidBecomeInteractive() {
@@ -907,6 +1046,11 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         lastURL = loadedURL ?? ""
         print(lastURL)
         UserDefaults.standard.set(loadedURL, forKey: LAST_URL_KEY)
+
+        // Record the finished page in browsing history (skips homepage/non-http internally).
+        BrowserDataStore.shared.recordVisit(url: loadedURL, title: webView?.title)
+        // Reflect whether this page is bookmarked in the bar's star button.
+        barView?.setBookmarked(BrowserDataStore.shared.isBookmarked(loadedURL))
 
         onFinishLoad?()
 
@@ -919,19 +1063,17 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         weak var blockSelf: WebController? = self
 
         if (keyPath == "estimatedProgress") && (object as? WKWebView) == blockSelf?.webView {
+            blockSelf?.barView?.setLoadProgress(Float(blockSelf?.webView?.estimatedProgress ?? 0))
             blockSelf?.webView?.evaluateJavaScript("document.readyState", completionHandler: { readyState, error in
                 DispatchQueue.main.async(execute: {
                     print("Estimated progress: \(blockSelf?.webView?.estimatedProgress ?? 0.0)")
                     print("document.readyState: \(readyState ?? "")")
 
                     if ((readyState as? String == "interactive") && !(blockSelf?.documentReadyState == "interactive")) || ((blockSelf?.webView?.estimatedProgress ?? 0.0) >= 1.0) {
-                        if blockSelf?.webView?.observationInfo != nil {
-                            if let aSelf = blockSelf {
-                                blockSelf?.webView?.removeObserver(aSelf as NSObject, forKeyPath: "estimatedProgress")
-                            }
+                        // Only fire completion once: stopObservingProgress() returns true exactly for
+                        // the call that actually removes the observer.
+                        if blockSelf?.stopObservingProgress() == true {
                             blockSelf?.documentDidBecomeInteractive()
-                        } else {
-                            print("No Observers Found on WebView in WebController Override observeValue Check")
                         }
                     }
 

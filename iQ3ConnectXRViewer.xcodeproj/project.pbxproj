@@ -27,11 +27,16 @@
 		625051091FCDBDBE00EEAC0A /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 625051081FCDBDBE00EEAC0A /* GoogleService-Info.plist */; };
 		625FA2E6202046BF00F62698 /* TermsAndConditionsTableViewCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 625FA2E4202046BF00F62698 /* TermsAndConditionsTableViewCell.swift */; };
 		625FA2E7202046BF00F62698 /* TermsAndConditionsTableViewCell.xib in Resources */ = {isa = PBXBuildFile; fileRef = 625FA2E5202046BF00F62698 /* TermsAndConditionsTableViewCell.xib */; };
+		7E0E01802FE29C1A00229C1D /* BrowserDataStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0E017F2FE29C1100229C1D /* BrowserDataStore.swift */; };
+		7E0E01862FE2C60C00229C1D /* BookmarksViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0E01852FE2C60100229C1D /* BookmarksViewController.swift */; };
+		7E0E01882FE2CC1600229C1D /* QRScannerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0E01872FE2CC0A00229C1D /* QRScannerViewController.swift */; };
+		7E0E018A2FE3CE6300229C1D /* TabManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0E01892FE3CE5E00229C1D /* TabManager.swift */; };
+		7E0E018C2FE3CE8300229C1D /* TabTrayViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E0E018B2FE3CE7B00229C1D /* TabTrayViewController.swift */; };
 		7E85E7932D6351B3007C97F0 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E7922D6351B3007C97F0 /* SplashScreen.storyboard */; };
 		7E85E79E2D6521D7007C97F0 /* SplashScreen2.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 7E85E79D2D6521D7007C97F0 /* SplashScreen2.storyboard */; };
+		7EDE66F52E45B4A2003C665B /* userScript.js in Resources */ = {isa = PBXBuildFile; fileRef = 7EDE66F42E45B494003C665B /* userScript.js */; };
 		7EFC179D2D785D68001432EF /* fontController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EFC179C2D785D5F001432EF /* fontController.swift */; };
 		8E5089D8211B6DA90059015B /* webxr.js in Resources */ = {isa = PBXBuildFile; fileRef = 8E5089D7211B6DA90059015B /* webxr.js */; };
-		8ED9EBB3211C6FB000DA58F1 /* Web in Resources */ = {isa = PBXBuildFile; fileRef = 8ED9EBB2211C6FB000DA58F1 /* Web */; };
 		B61E2B2722249D500031955F /* ActivityIndicatorButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B61E2B2622249D500031955F /* ActivityIndicatorButton.swift */; };
 		B620ED0E21F7B2E90066B4A8 /* ARKController+Images.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED0D21F7B2E90066B4A8 /* ARKController+Images.swift */; };
 		B620ED1021FB90A50066B4A8 /* ARKController+ARSessionDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = B620ED0F21FB90A50066B4A8 /* ARKController+ARSessionDelegate.swift */; };
@@ -75,9 +80,11 @@
 		B6FE960521B61FEE0087A21F /* TouchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FE960421B61FEE0087A21F /* TouchView.swift */; };
 		B6FEAC0D224AC20200EE0343 /* ShaderTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FEAC0C224AC20200EE0343 /* ShaderTypes.swift */; };
 		B6FEAC0F224AD4D500EE0343 /* Renderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6FEAC0E224AD4D500EE0343 /* Renderer.swift */; };
+		BB0AB82B7F0029E6594942F2 /* Pods_iQ3ConnectXRViewer.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9CF521942748E898435630C /* Pods_iQ3ConnectXRViewer.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0197A4D6245E0356ADCBC8F6 /* Pods-iQ3ConnectXRViewer.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iQ3ConnectXRViewer.debug.xcconfig"; path = "Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer.debug.xcconfig"; sourceTree = "<group>"; };
 		0401E04A1F612C240075D823 /* BarView.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = BarView.xib; sourceTree = "<group>"; };
 		041503C11F28944F00887400 /* iQ3ConnectXRViewer.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = iQ3ConnectXRViewer.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		041503D11F28944F00887400 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
@@ -88,6 +95,7 @@
 		04A983661F32268900120CF8 /* ARKController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ARKController.h; sourceTree = "<group>"; };
 		04A9836A1F3226A500120CF8 /* Shaders.metal */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.metal; path = Shaders.metal; sourceTree = "<group>"; };
 		04BB9D641F39BE40004328A2 /* ARKHelper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ARKHelper.h; sourceTree = "<group>"; };
+		4E994EC7739B78BF0C15E227 /* Pods-iQ3ConnectXRViewer.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-iQ3ConnectXRViewer.release.xcconfig"; path = "Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer.release.xcconfig"; sourceTree = "<group>"; };
 		6207254C206A90BF00887B1F /* RequestPermissionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestPermissionsViewController.swift; sourceTree = "<group>"; };
 		6207254D206A90BF00887B1F /* RequestPermissionsViewController.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = RequestPermissionsViewController.xib; sourceTree = "<group>"; };
 		620D24A01FC48994002127FD /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
@@ -103,11 +111,16 @@
 		625051081FCDBDBE00EEAC0A /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		625FA2E4202046BF00F62698 /* TermsAndConditionsTableViewCell.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsTableViewCell.swift; sourceTree = "<group>"; };
 		625FA2E5202046BF00F62698 /* TermsAndConditionsTableViewCell.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; path = TermsAndConditionsTableViewCell.xib; sourceTree = "<group>"; };
+		7E0E017F2FE29C1100229C1D /* BrowserDataStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowserDataStore.swift; sourceTree = "<group>"; };
+		7E0E01852FE2C60100229C1D /* BookmarksViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookmarksViewController.swift; sourceTree = "<group>"; };
+		7E0E01872FE2CC0A00229C1D /* QRScannerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerViewController.swift; sourceTree = "<group>"; };
+		7E0E01892FE3CE5E00229C1D /* TabManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabManager.swift; sourceTree = "<group>"; };
+		7E0E018B2FE3CE7B00229C1D /* TabTrayViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabTrayViewController.swift; sourceTree = "<group>"; };
 		7E85E7912D6351B3007C97F0 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/SplashScreen.storyboard; sourceTree = "<group>"; };
 		7E85E79C2D6521D7007C97F0 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Base.lproj/SplashScreen2.storyboard; sourceTree = "<group>"; };
+		7EDE66F42E45B494003C665B /* userScript.js */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.javascript; path = userScript.js; sourceTree = "<group>"; };
 		7EFC179C2D785D5F001432EF /* fontController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = fontController.swift; sourceTree = "<group>"; };
 		8E5089D7211B6DA90059015B /* webxr.js */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.javascript; path = webxr.js; sourceTree = "<group>"; };
-		8ED9EBB2211C6FB000DA58F1 /* Web */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Web; sourceTree = "<group>"; };
 		B61E2B2622249D500031955F /* ActivityIndicatorButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityIndicatorButton.swift; sourceTree = "<group>"; };
 		B620ED0D21F7B2E90066B4A8 /* ARKController+Images.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ARKController+Images.swift"; sourceTree = "<group>"; };
 		B620ED0F21FB90A50066B4A8 /* ARKController+ARSessionDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "ARKController+ARSessionDelegate.swift"; sourceTree = "<group>"; };
@@ -151,13 +164,12 @@
 		B6FE960421B61FEE0087A21F /* TouchView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TouchView.swift; sourceTree = "<group>"; };
 		B6FEAC0C224AC20200EE0343 /* ShaderTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShaderTypes.swift; sourceTree = "<group>"; };
 		B6FEAC0E224AD4D500EE0343 /* Renderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Renderer.swift; sourceTree = "<group>"; };
+		E9CF521942748E898435630C /* Pods_iQ3ConnectXRViewer.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_iQ3ConnectXRViewer.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		7EFC168B2D6E3257001432EF /* homepage */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = homepage;
 			sourceTree = "<group>";
 		};
@@ -168,6 +180,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				BB0AB82B7F0029E6594942F2 /* Pods_iQ3ConnectXRViewer.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -177,10 +190,10 @@
 		041503B81F28944F00887400 = {
 			isa = PBXGroup;
 			children = (
-				8ED9EBB2211C6FB000DA58F1 /* Web */,
 				041503C31F28944F00887400 /* XRViewer */,
 				041503C21F28944F00887400 /* Products */,
 				AFE5BF494CC7B1BC862A1216 /* Pods */,
+				2A73E78B012AA22EF6C0711B /* Frameworks */,
 			);
 			sourceTree = "<group>";
 		};
@@ -225,6 +238,10 @@
 		04A983611F32213800120CF8 /* WebController */ = {
 			isa = PBXGroup;
 			children = (
+				7E0E018B2FE3CE7B00229C1D /* TabTrayViewController.swift */,
+				7E0E01892FE3CE5E00229C1D /* TabManager.swift */,
+				7E0E01872FE2CC0A00229C1D /* QRScannerViewController.swift */,
+				7E0E01852FE2C60100229C1D /* BookmarksViewController.swift */,
 				B658C0F121BF43D500538D57 /* WebController.swift */,
 				B679967821B06A7000612AF4 /* BarView.swift */,
 				B61E2B2622249D500031955F /* ActivityIndicatorButton.swift */,
@@ -278,6 +295,7 @@
 		04A983761F32279900120CF8 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				7EDE66F42E45B494003C665B /* userScript.js */,
 				7EFC168B2D6E3257001432EF /* homepage */,
 				6241012B1FEABABF006FDBE3 /* XRViewer-Bridging-Header.h */,
 				041503D81F28944F00887400 /* Info.plist */,
@@ -326,6 +344,14 @@
 			path = AppStateController;
 			sourceTree = "<group>";
 		};
+		2A73E78B012AA22EF6C0711B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E9CF521942748E898435630C /* Pods_iQ3ConnectXRViewer.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		6207254B206A909100887B1F /* RequestPermissionsController */ = {
 			isa = PBXGroup;
 			children = (
@@ -359,6 +385,8 @@
 		AFE5BF494CC7B1BC862A1216 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
+				0197A4D6245E0356ADCBC8F6 /* Pods-iQ3ConnectXRViewer.debug.xcconfig */,
+				4E994EC7739B78BF0C15E227 /* Pods-iQ3ConnectXRViewer.release.xcconfig */,
 			);
 			path = Pods;
 			sourceTree = "<group>";
@@ -366,6 +394,7 @@
 		B62CE86621CC46930053F9B3 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				7E0E017F2FE29C1100229C1D /* BrowserDataStore.swift */,
 				B67D97A621C9843B0075FE0A /* Animator.swift */,
 				B632851621C4330500FD5510 /* Constants.swift */,
 				B62CE86421CC0FDF0053F9B3 /* Reachability.swift */,
@@ -381,9 +410,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 041503DD1F28944F00887400 /* Build configuration list for PBXNativeTarget "iQ3ConnectXRViewer" */;
 			buildPhases = (
+				62A1D50F8FC55CF4719F91A1 /* [CP] Check Pods Manifest.lock */,
 				041503BD1F28944F00887400 /* Sources */,
 				041503BE1F28944F00887400 /* Frameworks */,
 				041503BF1F28944F00887400 /* Resources */,
+				68525264C9FB594E975B2CB1 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -403,7 +434,8 @@
 		041503B91F28944F00887400 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 1020;
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 2650;
 				ORGANIZATIONNAME = iQ3Connect;
 				TargetAttributes = {
 					041503C01F28944F00887400 = {
@@ -450,13 +482,59 @@
 				B632850B21C330A500FD5510 /* MyriadPro-Regular.OTF in Resources */,
 				62242ACC201F2D3600506412 /* TextTableViewCell.xib in Resources */,
 				04A815681F419EB60082D31D /* Models.scnassets in Resources */,
+				7EDE66F52E45B4A2003C665B /* userScript.js in Resources */,
 				625051091FCDBDBE00EEAC0A /* GoogleService-Info.plist in Resources */,
 				62242AC8201F2AE100506412 /* SwitchInputTableViewCell.xib in Resources */,
-				8ED9EBB3211C6FB000DA58F1 /* Web in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		62A1D50F8FC55CF4719F91A1 /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-iQ3ConnectXRViewer-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		68525264C9FB594E975B2CB1 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			inputPaths = (
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-iQ3ConnectXRViewer/Pods-iQ3ConnectXRViewer-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		041503BD1F28944F00887400 /* Sources */ = {
@@ -467,7 +545,9 @@
 				B6468D8E228CC20C002F22A3 /* ARKController+ARSessionObserver.swift in Sources */,
 				B654FED421F1179B0004F001 /* ARKController+Anchors.swift in Sources */,
 				B6FEAC0F224AD4D500EE0343 /* Renderer.swift in Sources */,
+				7E0E01802FE29C1A00229C1D /* BrowserDataStore.swift in Sources */,
 				625FA2E6202046BF00F62698 /* TermsAndConditionsTableViewCell.swift in Sources */,
+				7E0E018C2FE3CE8300229C1D /* TabTrayViewController.swift in Sources */,
 				B68A7C4F21BB2FAB0033170C /* HitTestResult.swift in Sources */,
 				B68A7C5121BB34C40033170C /* ARKControllerProtocol.swift in Sources */,
 				04A9837C1F32292900120CF8 /* Shaders.metal in Sources */,
@@ -494,13 +574,16 @@
 				B69C048221B838A300C9A4EC /* ARSCNView+HitTest.swift in Sources */,
 				B69C047B21B73E9800C9A4EC /* FocusNode.swift in Sources */,
 				62242AC0201F037F00506412 /* SettingsViewController.swift in Sources */,
+				7E0E01862FE2C60C00229C1D /* BookmarksViewController.swift in Sources */,
 				B698074021DA7A8900322782 /* AppState.swift in Sources */,
 				B64B19FE21B9832A00787AA5 /* ARKSceneKitController.swift in Sources */,
+				7E0E018A2FE3CE6300229C1D /* TabManager.swift in Sources */,
 				B69C047E21B8325F00C9A4EC /* PlaneNode.swift in Sources */,
 				62242AC7201F2AE100506412 /* SwitchInputTableViewCell.swift in Sources */,
 				B69C047621B7333500C9A4EC /* AnchorNode.swift in Sources */,
 				B6FE960321B61BDC0087A21F /* AppStateController.swift in Sources */,
 				B67D97A321C8453F0075FE0A /* UIOverlayController.swift in Sources */,
+				7E0E01882FE2CC1600229C1D /* QRScannerViewController.swift in Sources */,
 				B6468D90228F5074002F22A3 /* ViewController+MessagePanel.swift in Sources */,
 				B67D97A521C854C20075FE0A /* OverlayViewController.swift in Sources */,
 				62242ACB201F2D3600506412 /* TextTableViewCell.swift in Sources */,
@@ -571,6 +654,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -580,6 +664,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -596,10 +681,11 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "ALLOW_GET_WORLDMAP WEBSERVER";
 			};
 			name = Debug;
@@ -629,6 +715,7 @@
 				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
 				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
 				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
 				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
@@ -638,6 +725,7 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -648,9 +736,10 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 11.4;
+				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = ALLOW_GET_WORLDMAP;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
@@ -659,12 +748,12 @@
 		};
 		041503DE1F28944F00887400 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 0197A4D6245E0356ADCBC8F6 /* Pods-iQ3ConnectXRViewer.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
+				CURRENT_PROJECT_VERSION = 17;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"COCOAPODS=1",
@@ -672,31 +761,35 @@
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/XRViewer/Resources/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";
-				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				IPHONEOS_DEPLOYMENT_TARGET = 19;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6;
+				MARKETING_VERSION = 3;
 				OTHER_CFLAGS = "-DCOREVIDEO_SILENCE_GL_DEPRECATION";
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" -D USE_ANALYTICS";
 				PRODUCT_BUNDLE_IDENTIFIER = iq3.ios.iQ3ConnectXRViewer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "XRViewer/Resources/XRViewer-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				XROS_DEPLOYMENT_TARGET = 1.3;
 			};
 			name = Debug;
 		};
 		041503DF1F28944F00887400 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4E994EC7739B78BF0C15E227 /* Pods-iQ3ConnectXRViewer.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_ENABLE_MODULES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 8FU4V2MYQ2;
+				CURRENT_PROJECT_VERSION = 17;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"COCOAPODS=1",
@@ -704,19 +797,23 @@
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/XRViewer/Resources/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";
-				IPHONEOS_DEPLOYMENT_TARGET = 17;
+				IPHONEOS_DEPLOYMENT_TARGET = 19;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 6;
+				MARKETING_VERSION = 3;
 				OTHER_CFLAGS = "-DCOREVIDEO_SILENCE_GL_DEPRECATION";
 				OTHER_SWIFT_FLAGS = "$(inherited) \"-D\" \"COCOAPODS\" -D USE_ANALYTICS";
 				PRODUCT_BUNDLE_IDENTIFIER = iq3.ios.iQ3ConnectXRViewer;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = YES;
 				SWIFT_OBJC_BRIDGING_HEADER = "XRViewer/Resources/XRViewer-Bridging-Header.h";
 				SWIFT_VERSION = 4.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
+				XROS_DEPLOYMENT_TARGET = 1.3;
 			};
 			name = Release;
 		};
