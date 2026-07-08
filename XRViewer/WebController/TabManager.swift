@@ -28,6 +28,10 @@ final class Tab {
         return nil
     }
     var title: String? { return webView?.title }
+    
+    var isHomepage: Bool {
+        return (urlString?.isEmpty ?? true) || (urlString?.contains(HOMEPAGE_NAME) ?? false)
+    }
 }
 
 /// Persists the open tabs' URLs + selected index across app relaunches (UserDefaults).

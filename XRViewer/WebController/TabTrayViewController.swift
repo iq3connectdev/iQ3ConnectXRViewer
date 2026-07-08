@@ -152,8 +152,10 @@ final class TabStripView: UIView, UICollectionViewDataSource, UICollectionViewDe
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "stripCell", for: indexPath) as! TabStripCell
         let tab = tabs[indexPath.item]
-        let titleText = (tab.title?.isEmpty == false) ? tab.title : (tab.urlString ?? "New Tab")
-        cell.configure(title: titleText, favicon: tab.favicon, isSelected: tab === selectedTab)
+        let titleText = tab.isHomepage ? "iQ3Connect XR Viewer"
+            : ((tab.title?.isEmpty == false) ? tab.title : (tab.urlString ?? "New Tab"))
+        let icon = tab.favicon ?? (tab.isHomepage ? UIImage(named: "logo") : nil)
+        cell.configure(title: titleText, favicon: icon, isSelected: tab === selectedTab)
         cell.onClose = { [weak self] in self?.onCloseTab?(tab) }   // capture tab, not indexPath
         return cell
     }
@@ -270,14 +272,17 @@ final class TabListViewController: UITableViewController {
         let cell = tableView.dequeueReusableCell(withIdentifier: "tabRow")
             ?? UITableViewCell(style: .subtitle, reuseIdentifier: "tabRow")
         let tab = tabs[indexPath.row]
-        cell.textLabel?.text = (tab.title?.isEmpty == false) ? tab.title : (tab.urlString ?? "New Tab")
+        cell.textLabel?.text = tab.isHomepage ? "iQ3Connect XR Viewer"
+            : ((tab.title?.isEmpty == false) ? tab.title : (tab.urlString ?? "New Tab"))
         cell.textLabel?.textColor = .black
-        cell.detailTextLabel?.text = tab.urlString
+        cell.detailTextLabel?.text = tab.isHomepage ? nil : tab.urlString
         cell.detailTextLabel?.textColor = .gray
         // Normalise all favicons to the same display size so large app-icons don't dwarf small ones.
         let iconSize = CGSize(width: 28, height: 28)
         if let favicon = tab.favicon {
             cell.imageView?.image = favicon.resized(to: iconSize)
+        } else if tab.isHomepage {
+            cell.imageView?.image = UIImage(named: "logo")?.resized(to: iconSize)
         } else {
             cell.imageView?.image = UIImage(systemName: "globe",
                 withConfiguration: UIImage.SymbolConfiguration(pointSize: 16))
@@ -310,7 +315,6 @@ final class TabListViewController: UITableViewController {
         dismiss(animated: true) { [weak self] in self?.onSelectTab?(tab) }
     }
 }
-
 
 private extension UIImage {
     /// Returns a copy of the image scaled to `size`, used to normalise favicon sizes in table cells.

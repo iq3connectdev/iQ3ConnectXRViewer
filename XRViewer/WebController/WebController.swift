@@ -98,7 +98,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             return
         }
         
-        goFullScreen()
+        //goFullScreen()
 
         var url: URL?
 //        if theUrl?.hasPrefix("http://") ?? false || theUrl?.hasPrefix("https://") ?? false {

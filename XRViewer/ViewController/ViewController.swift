@@ -695,7 +695,6 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             webController?.hideCameraFlipButton()
         }
 
-        
         tabManager.delegate = self
         if let initialWebView = webController?.webView {
             tabManager.resetToSingleTab(Tab(webView: initialWebView))
@@ -1206,7 +1205,6 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
         webController?.setTabCount(tabManager.count)   // keep the tabs-button count badge in sync
     }
 
-
     func presentTabList() {
         weak var blockSelf: ViewController? = self
         let listVC = TabListViewController()
@@ -1232,8 +1230,13 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 
     /// Fetch a favicon for the tab strip (via Google's favicon service) and refresh the strip.
     func fetchFavicon(for tab: Tab) {
+        if (tab.urlString?.isEmpty ?? true) || (tab.urlString?.contains(HOMEPAGE_NAME) ?? false) {
+            tab.favicon = UIImage(named: "logo")
+            refreshTabStrip()
+            return
+        }
         guard let urlString = tab.urlString,
-              let host = URL(string: urlString)?.host,
+              let host = URL(string: urlString)?.host, !host.isEmpty,
               let faviconURL = URL(string: "https://www.google.com/s2/favicons?sz=64&domain=\(host)") else { return }
         URLSession.shared.dataTask(with: faviconURL) { [weak self] data, _, _ in
             guard let data = data, let image = UIImage(data: data) else { return }
@@ -1495,7 +1498,6 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 extension ViewController: TabManagerDelegate {
     func tabManager(_ manager: TabManager, didSelect tab: Tab?, previous: Tab?) {
         guard let webView = tab?.webView else { return }
-        
         if webController?.webView === webView { return }
 
         // Single-AR model: switching tabs exits any running AR session.
