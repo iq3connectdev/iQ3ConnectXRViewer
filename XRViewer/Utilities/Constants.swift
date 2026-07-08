@@ -100,7 +100,17 @@ let BOX_SIZE: CGFloat = 0.05
     @objc static func recordOffsetY() -> CGFloat { return 25.5 }
     @objc static func micSizeW() -> CGFloat { return 27.75 }
     @objc static func micSizeH() -> CGFloat { return 27.75 }
-    @objc static func urlBarHeight() -> CGFloat { return 49 }
+    @objc static func urlBarHeight() -> CGFloat { return 44 }    // Firefox-iOS-like compact toolbar
+    @objc static func tabStripHeight() -> CGFloat { return 36 }  // Firefox-iOS-like compact tab strip
+
+    /// The background used for the URL bar and tab-strip band (light gray, close to Firefox iOS).
+    @objc static func chromeBackgroundColor() -> UIColor { return UIColor(white: 0.95, alpha: 1.0) }
+    /// The background of an active (foreground) tab card in the strip.
+    @objc static func activeTabColor() -> UIColor { return UIColor(white: 1.0, alpha: 1.0) }
+    /// The background of an inactive (background) tab card in the strip.
+    @objc static func inactiveTabColor() -> UIColor { return UIColor(white: 0.88, alpha: 1.0) }
+    /// Accent color for the active-tab top indicator.
+    @objc static func accentColor() -> UIColor { return UIColor(red: 0.25, green: 0.47, blue: 0.85, alpha: 1.0) }
     @objc static func urlBarAnimationTimeInSeconds() -> TimeInterval { return 0.2 }
     @objc static func boxSize() -> CGFloat { return BOX_SIZE }
 }
@@ -152,6 +162,9 @@ let WEB_AR_IOS_DID_RECEIVE_MEMORY_WARNING_MESSAGE = "ios_did_receive_memory_warn
 let WEB_AR_IOS_USER_GRANTED_CV_DATA = "userGrantedComputerVisionData"
 let WEB_AR_IOS_USER_GRANTED_WORLD_SENSING_DATA = "userGrantedWorldSensingData"
 let LOAD_WEBPAGE_CONTENT_FROM_URL = "loadWebpageContentFromURL"
+
+let WEB_AR_IOS_USERSTOPPED_AR = "userStoppedAR"
+let WEB_AR_OPEN_NEW_TAB_MESSAGE = "openInNewTab"
 
 // This message is not being used by the polyfill
 // #define WEB_AR_IOS_VIEW_WILL_TRANSITION_TO_SIZE_MESSAGE   @"ios_view_will_transition_to_size"

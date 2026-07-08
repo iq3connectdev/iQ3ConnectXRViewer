@@ -10,8 +10,9 @@
     const originalOpen = window.open;
     window.open = function(url, target, options) {
         if (typeof webkit !== 'undefined' && webkit.messageHandlers) {
-            if(url) {
-                window.location.href = url;
+            if (url && webkit.messageHandlers.openInNewTab) {
+                // Ask the native app to open this URL in a NEW tab.
+                webkit.messageHandlers.openInNewTab.postMessage({ url: String(url) });
             }
             return {
                 closed: false,
@@ -37,9 +38,10 @@
                 event.button === 1
             );
             
-            if (shouldOverride && typeof webkit !== 'undefined' && webkit.messageHandlers) {
+            if (shouldOverride && typeof webkit !== 'undefined' && webkit.messageHandlers && webkit.messageHandlers.openInNewTab) {
+                // Open target=_blank / cmd-click / middle-click links in a NEW native tab.
                 event.preventDefault();
-                window.location.href = link.href;
+                webkit.messageHandlers.openInNewTab.postMessage({ url: String(link.href) });
                 return false;
             }
         }, true);
