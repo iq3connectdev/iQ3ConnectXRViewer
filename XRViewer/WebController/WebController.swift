@@ -1007,17 +1007,24 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     /// Make `webView` the active tab's web view: detach the current one (kept alive by its Tab),
     /// attach the new one, and sync the URL bar to it. Called on tab switch.
     func switchToWebView(_ webView: WKWebView) {
-        guard webView !== self.webView else { return }
-        detachWebView()
-        attachWebView(webView)
+           guard webView !== self.webView else { return }
+           detachWebView()
+           attachWebView(webView)
 
-        let urlString = webView.url?.absoluteString
-        barView?.urlField.text = (urlString?.contains(HOMEPAGE_NAME) ?? false) ? "" : urlString
-        barView?.setBackEnabled(webView.canGoBack)
-        barView?.setForwardEnabled(webView.canGoForward)
-        barView?.setBookmarked(BrowserDataStore.shared.isBookmarked(urlString))
-        lastURL = urlString ?? ""
-    }
+           if webView.isLoading {
+               barView?.startLoading(webView.url?.absoluteString)
+               barView?.setLoadProgress(Float(webView.estimatedProgress))
+           } else {
+               barView?.finishLoading(webView.url?.absoluteString)
+           }
+
+           let urlString = webView.url?.absoluteString
+           barView?.urlField.text = (urlString?.contains(HOMEPAGE_NAME) ?? false) ? "" : urlString
+           barView?.setBackEnabled(webView.canGoBack)
+           barView?.setForwardEnabled(webView.canGoForward)
+           barView?.setBookmarked(BrowserDataStore.shared.isBookmarked(urlString))
+           lastURL = urlString ?? ""
+       }
 
     /// Start KVO-observing estimatedProgress on `webView`, removing any prior observation first so
     /// add/remove always stay balanced (prevents leaks/crashes when switching tabs mid-load).

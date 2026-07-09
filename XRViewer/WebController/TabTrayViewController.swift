@@ -130,11 +130,23 @@ final class TabStripView: UIView, UICollectionViewDataSource, UICollectionViewDe
 
     /// Update the displayed tabs + highlight; call whenever tabs change or a title/favicon updates.
     func update(tabs: [Tab], selectedTab: Tab?) {
+        let didAddTab = tabs.count > self.tabs.count
+        let didChangeSelection = selectedTab !== self.selectedTab
         self.tabs = tabs
         self.selectedTab = selectedTab
         collectionView.reloadData()
+        
+        guard didAddTab || didChangeSelection,
+              let selected = selectedTab,
+              let index = tabs.firstIndex(where: { $0 === selected }) else { return }
+        let indexPath = IndexPath(item: index, section: 0)
+        collectionView.layoutIfNeeded()
+        guard let attributes = collectionView.layoutAttributesForItem(at: indexPath) else { return }
+        let visibleRect = CGRect(origin: collectionView.contentOffset, size: collectionView.bounds.size)
+        if !visibleRect.contains(attributes.frame) {
+            collectionView.scrollToItem(at: indexPath, at: .centeredHorizontally, animated: true)
+        }
     }
-
     @objc private func addTapped() { onNewTab?() }
     @objc private func tabsButtonTapped() { onTabsButtonTapped?() }
 

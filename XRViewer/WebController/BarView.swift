@@ -289,6 +289,7 @@ class BarView: UIView, UITextFieldDelegate, UITableViewDataSource, UITableViewDe
         button.heightAnchor.constraint(equalToConstant: 40).isActive = true
         button.accessibilityLabel = "More"
         button.showsMenuAsPrimaryAction = true
+        button.overrideUserInterfaceStyle = .light
         self.overflowButton = button
         updateOverflowMenu()
         return button
