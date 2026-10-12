@@ -132,6 +132,8 @@ typedef void (^ResultArrayBlock)(NSArray *);
 @property(nonatomic, strong) SetWorldMapCompletionBlock setWorldMapPromise;
 /// completion block for getWorldMap request
 @property(nonatomic, strong) GetWorldMapCompletionBlock getWorldMapPromise;
+/// When YES, a World Map was loaded via setWorldMap and ARKit may be relocalizing; native UI must not reset tracking.
+@property(nonatomic) BOOL worldMapRelocalizationInProgress;
 @property (nonatomic, strong) AVCaptureDevice *device;
 @property (nonatomic, strong) id<ARKControllerProtocol> controller;
 /// The CV image being sent to JS is downscaled using the metho

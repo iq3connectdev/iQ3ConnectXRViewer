@@ -412,7 +412,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                 guard let state = blockSelf?.stateController.state else { return }
                 
                 if blockSelf?.arkController?.trackingStateRelocalizing() ?? false {
-                    blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
+                    if !(blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false) {
+                        blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
+                    }
                     return
                 }
                 
@@ -421,11 +423,16 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                         print("\n\n*********\n\nARKit is in unknown state, instantiate and start a session\n\n*********")
                         blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
                     case .ARKSessionRunning:
-                        if let lastTrackingResetDate = UserDefaults.standard.object(forKey: Constant.lastResetSessionTrackingDateKey()) as? Date,
+                        if !(blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false),
+                           let lastTrackingResetDate = UserDefaults.standard.object(forKey: Constant.lastResetSessionTrackingDateKey()) as? Date,
                             Date().timeIntervalSince(lastTrackingResetDate) >= Constant.thresholdTimeInSecondsSinceLastTrackingReset() {
                             print("\n\n*********\n\nSession is running but it's been a while since last resetting tracking, resetting tracking and removing anchors now to prevent coordinate system drift\n\n*********")
                             blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
                         } else if blockSelf?.urlIsNotTheLastXRVisitedURL() ?? false {
+                            if blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false {
+                                print("\n\n*********\n\nSkipping URL-change session update while World Map relocalization is in progress\n\n*********")
+                                return
+                            }
                             print("\n\n*********\n\nThis site is not the last XR site visited, and the timer hasn't expired yet. Remove distant anchors and continue with the session\n\n*********")
                             blockSelf?.arkController?.removeDistantAnchors()
                             blockSelf?.arkController?.runSession(with: state)

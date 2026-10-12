@@ -147,9 +147,10 @@ import Compression
             return
         }
         
-        if !worldMappingAvailable() {
+        if !worldMappingMapped() {
+            let status = worldMappingStatusString(for: session?.currentFrame)
             if completion != nil {
-                completion?(false, "Cannot get World Map until World Mapping has started", nil)
+                completion?(false, "Cannot get World Map until the environment is mapped. Scan the area slowly and try again (status: \(status)).", nil)
             }
             return
         }
@@ -164,6 +165,7 @@ import Compression
                         data = try NSKeyedArchiver.archivedData(withRootObject: worldMap, requiringSecureCoding: true)
                     } catch {
                         print("Error accessing archived worldMap data")
+                        completion(false, "request to get World Map failed: could not archive map data", nil)
                         return
                     }
                     let compressedData = self.getCompressedData(data)
@@ -202,6 +204,8 @@ import Compression
             } else {
                 if let error = error {
                     completion?(false, "request to get World Map failed: \(error)", nil)
+                } else {
+                    completion?(false, "request to get World Map failed: no map data returned", nil)
                 }
             }
         })
@@ -253,6 +257,7 @@ import Compression
         setWorldMapPromise = nil
         
         if configuration is ARWorldTrackingConfiguration {
+            worldMapRelocalizationInProgress = true
             // First, let's restart with current configuration, but remove existing anchors
             //    [[self session] runWithConfiguration:[self configuration] options: ARSessionRunOptionRemoveExistingAnchors];
             print("Restarted, removing existing anchors")
@@ -389,6 +394,22 @@ import Compression
     func worldMappingAvailable() -> Bool {
         guard let ws = session?.currentFrame?.worldMappingStatus else { return false }
         return ws != .notAvailable
+    }
+    
+    /// World map capture for the web bridge requires a fully mapped environment.
+    func worldMappingMapped() -> Bool {
+        guard let ws = session?.currentFrame?.worldMappingStatus else { return false }
+        return ws == .mapped
+    }
+    
+    func worldMappingStatusString(for frame: ARFrame?) -> String {
+        guard let ws = frame?.worldMappingStatus else { return "unknown" }
+        switch ws {
+        case .notAvailable: return WEB_AR_WORLDMAPPING_NOT_AVAILABLE
+        case .limited: return WEB_AR_WORLDMAPPING_LIMITED
+        case .extending: return WEB_AR_WORLDMAPPING_EXTENDING
+        case .mapped: return WEB_AR_WORLDMAPPING_MAPPED
+        }
     }
     
     /**

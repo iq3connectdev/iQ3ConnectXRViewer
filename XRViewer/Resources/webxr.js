@@ -3990,6 +3990,8 @@ class ARKitWrapper extends EventTarget {
         this._timeOffsetComputed = false;
         this._dataBeforeNext = 0;
         this._worldMappingStatus = ARKitWrapper.WEB_AR_WORLDMAPPING_NOT_AVAILABLE;
+        this._trackingState = ARKitWrapper.WEB_AR_TRACKING_STATE_NOT_AVAILABLE;
+        this._worldMapRelocalizationInProgress = false;
         this._defaultOptions = {
             location: true,
             camera: true,
@@ -4223,6 +4225,12 @@ class ARKitWrapper extends EventTarget {
         copy$5(this._viewMatrix, data.camera_view);
         copy$5(this._projectionMatrix, data.projection_camera);
         this._worldMappingStatus = data.worldMappingStatus;
+        if (data.trackingState) {
+            this._trackingState = data.trackingState;
+        }
+        if (data.worldMapRelocalizationInProgress !== undefined) {
+            this._worldMapRelocalizationInProgress = !!data.worldMapRelocalizationInProgress;
+        }
         if (data.newObjects.length) {
             for (let i = 0; i < data.newObjects.length; i++) {
                 const element = data.newObjects[i];
@@ -4610,9 +4618,9 @@ class ARKitWrapper extends EventTarget {
     hitTest(x, y, types=ARKitWrapper.HIT_TEST_TYPE_ALL) {
         return this._hitTest(x, y, types);
     }
-    createAnchor(anchorInWorldMatrix) {
+    createAnchor(anchorInWorldMatrix, anchorUid=null) {
         return new Promise((resolve, reject) => {
-            const tempAnchor = new XRAnchor(anchorInWorldMatrix, null, this._timestamp);
+            const tempAnchor = new XRAnchor(anchorInWorldMatrix, anchorUid, this._timestamp);
             this._addAnchor(tempAnchor.uid, anchorInWorldMatrix).then(detail => {
                 if (detail.error) {
                     reject(detail.error);
@@ -4812,6 +4820,13 @@ ARKitWrapper.WEB_AR_WORLDMAPPING_NOT_AVAILABLE = "ar_worldmapping_not_available"
 ARKitWrapper.WEB_AR_WORLDMAPPING_LIMITED       = "ar_worldmapping_limited";
 ARKitWrapper.WEB_AR_WORLDMAPPING_EXTENDING     = "ar_worldmapping_extending";
 ARKitWrapper.WEB_AR_WORLDMAPPING_MAPPED        = "ar_worldmapping_mapped";
+ARKitWrapper.WEB_AR_TRACKING_STATE_NOT_AVAILABLE = "ar_tracking_not_available";
+ARKitWrapper.WEB_AR_TRACKING_STATE_NORMAL = "ar_tracking_normal";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED = "ar_tracking_limited";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_INITIALIZING = "ar_tracking_limited_initializing";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_MOTION = "ar_tracking_limited_excessive_motion";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_FEATURES = "ar_tracking_limited_insufficient_features";
+ARKitWrapper.WEB_AR_TRACKING_STATE_RELOCALIZING = "ar_tracking_relocalizing";
 ARKitWrapper.HIT_TEST_TYPE_FEATURE_POINT = 1;
 ARKitWrapper.HIT_TEST_TYPE_ESTIMATED_HORIZONTAL_PLANE = 2;
 ARKitWrapper.HIT_TEST_TYPE_ESTIMATED_VERTICAL_PLANE = 4;
@@ -5527,7 +5542,7 @@ const xrPolyfill =  !isWebXRViewer ? null : new WebXRPolyfill(null, {
 let _arKitWrapper = null;
 const installAnchorsExtension = () => {
     if (window.XRFrame === undefined) { return; }
-    XRFrame.prototype.addAnchor = async function addAnchor(value, referenceSpace) {
+    XRFrame.prototype.addAnchor = async function addAnchor(value, referenceSpace, anchorName) {
         if (!this.session[PRIVATE$15].immersive) {
             return Promise.reject();
         }
@@ -5537,7 +5552,8 @@ const installAnchorsExtension = () => {
                 let localReferenceSpace = this.session[PRIVATE$15]._localSpace;
                 copy$5(_workingMatrix, this.getPose(localReferenceSpace, referenceSpace).transform.matrix);
                 const anchorInWorldMatrix = multiply$5(create$5(), _workingMatrix, value);
-                _arKitWrapper.createAnchor(anchorInWorldMatrix)
+                const name = (typeof anchorName === 'string' && anchorName.length) ? anchorName : null;
+                _arKitWrapper.createAnchor(anchorInWorldMatrix, name)
                     .then(resolve)
                     .catch((...params) => {
                         console.error('could not create anchor', ...params);
@@ -5657,6 +5673,18 @@ const installNonstandardExtension = () => {
             throw new Error('Not implemented');
         }
         return _arKitWrapper._worldMappingStatus;
+    };
+    XRSession$1.prototype.nonStandard_getTrackingState = function getTrackingState() {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        return _arKitWrapper._trackingState;
+    };
+    XRSession$1.prototype.nonStandard_getWorldMapRelocalizationInProgress = function getWorldMapRelocalizationInProgress() {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        return _arKitWrapper._worldMapRelocalizationInProgress;
     };
 };
 if (xrPolyfill && xrPolyfill.injected && navigator.xr) {

@@ -546,6 +546,9 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             onSetWorldMap?(worldMapInfoDictionary, { success, errorString in
                 var responseDictionary = [AnyHashable : Any]()
                 responseDictionary["loaded"] = success
+                if success {
+                    responseDictionary["message"] = "World map applied and session restarted. Relocalization is not complete until tracking returns to normal."
+                }
                 if errorString != nil {
                     responseDictionary["error"] = errorString ?? ""
                 }

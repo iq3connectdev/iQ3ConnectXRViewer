@@ -2,6 +2,9 @@ extension ARKController: ARSessionObserver {
     
     @objc(session:cameraDidChangeTrackingState:)
     func session(_ session: ARSession, cameraDidChangeTrackingState camera: ARCamera) {
+        if camera.trackingState == .normal {
+            worldMapRelocalizationInProgress = false
+        }
         didChangeTrackingState(camera)
     }
     

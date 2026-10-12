@@ -16,10 +16,10 @@ extension ARKController {
             let startTime = CFAbsoluteTimeGetCurrent()
             var blockTimes: [String: TimeInterval] = [:]
             
-            // status of ARKit World Mapping
+            // status of ARKit World Mapping and camera tracking (POC / relocalization gating)
             newData[WEB_AR_WORLDMAPPING_STATUS_MESSAGE] = worldMappingState(frame: frame)
-            print("resuest value");
-            print(request);
+            newData[WEB_AR_TRACKING_STATE_MESSAGE] = trackingState(for: frame)
+            newData[WEB_AR_WORLD_MAP_RELOCALIZATION_IN_PROGRESS] = NSNumber(value: worldMapRelocalizationInProgress)
             if (request[WEB_AR_LIGHT_INTENSITY_OPTION] as? NSNumber)?.boolValue ?? false {
                 let lightBlockStart = CFAbsoluteTimeGetCurrent()
                 // Light intensity block code...
@@ -197,6 +197,28 @@ extension ARKController {
             return WEB_AR_WORLDMAPPING_EXTENDING as NSString
         case .mapped:
             return WEB_AR_WORLDMAPPING_MAPPED as NSString
+        }
+    }
+    
+    private func trackingState(for frame: ARFrame) -> NSString {
+        switch frame.camera.trackingState {
+        case .notAvailable:
+            return WEB_AR_TRACKING_STATE_NOT_AVAILABLE as NSString
+        case .normal:
+            return WEB_AR_TRACKING_STATE_NORMAL as NSString
+        case .limited(let reason):
+            switch reason {
+            case .initializing:
+                return WEB_AR_TRACKING_STATE_LIMITED_INITIALIZING as NSString
+            case .excessiveMotion:
+                return WEB_AR_TRACKING_STATE_LIMITED_MOTION as NSString
+            case .insufficientFeatures:
+                return WEB_AR_TRACKING_STATE_LIMITED_FEATURES as NSString
+            case .relocalizing:
+                return WEB_AR_TRACKING_STATE_RELOCALIZING as NSString
+            @unknown default:
+                return WEB_AR_TRACKING_STATE_LIMITED as NSString
+            }
         }
     }
     
