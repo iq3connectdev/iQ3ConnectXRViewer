@@ -147,10 +147,10 @@ import Compression
             return
         }
         
-        if !worldMappingMapped() {
+        if !worldMappingReadyToSave() {
             let status = worldMappingStatusString(for: session?.currentFrame)
             if completion != nil {
-                completion?(false, "Cannot get World Map until the environment is mapped. Scan the area slowly and try again (status: \(status)).", nil)
+                completion?(false, "Scan more of your environment before saving (status: \(status)).", nil)
             }
             return
         }
@@ -396,10 +396,11 @@ import Compression
         return ws != .notAvailable
     }
     
-    /// World map capture for the web bridge requires a fully mapped environment.
-    func worldMappingMapped() -> Bool {
+    /// World map capture is allowed while ARKit is extending or has mapped the area.
+    /// notAvailable and limited still need more scanning.
+    func worldMappingReadyToSave() -> Bool {
         guard let ws = session?.currentFrame?.worldMappingStatus else { return false }
-        return ws == .mapped
+        return ws == .extending || ws == .mapped
     }
     
     func worldMappingStatusString(for frame: ARFrame?) -> String {

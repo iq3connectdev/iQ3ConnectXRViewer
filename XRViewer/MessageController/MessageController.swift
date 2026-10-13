@@ -479,18 +479,18 @@ class MessageController: NSObject, UITableViewDelegate, UITableViewDataSource {
                 if standardUserDefaults.bool(forKey: Constant.liteModeWebXREnabled()) {
                     authorizationGranted(.lite)
                 } else if standardUserDefaults.bool(forKey: Constant.worldSensingWebXREnabled()) {
-                    guard let worldControl = blockSelf?.requestXRPermissionsVC?.tableView.cellForRow(at: IndexPath(row: 3, section: 0)) as? SegmentedControlTableViewCell else { return }
-                    
-                    var newDict = [AnyHashable : Any]()
-                    if let dict = allowedWorldSensingSites {
-                        newDict = dict
+                    if let worldControl = blockSelf?.requestXRPermissionsVC?.tableView.cellForRow(at: IndexPath(row: 3, section: 0)) as? SegmentedControlTableViewCell {
+                        var newDict = [AnyHashable : Any]()
+                        if let dict = allowedWorldSensingSites {
+                            newDict = dict
+                        }
+                        if worldControl.segmentedControl.selectedSegmentIndex == 1 {
+                            newDict[currentSite] = "YES"
+                        } else {
+                            newDict[currentSite] = nil
+                        }
+                        UserDefaults.standard.set(newDict, forKey: Constant.allowedWorldSensingSitesKey())
                     }
-                    if worldControl.segmentedControl.selectedSegmentIndex == 1 {
-                        newDict[currentSite] = "YES"
-                    } else {
-                        newDict[currentSite] = nil
-                    }
-                    UserDefaults.standard.set(newDict, forKey: Constant.allowedWorldSensingSitesKey())
                     authorizationGranted(.worldSensing)
                 } else if standardUserDefaults.bool(forKey: Constant.minimalWebXREnabled()) {
                     authorizationGranted(.minimal)
