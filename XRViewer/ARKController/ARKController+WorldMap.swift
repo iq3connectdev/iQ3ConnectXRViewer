@@ -174,32 +174,19 @@ import Compression
                         completion(false, "request to get World Map failed: couldn't compress data", nil)
                         return
                     }
+                    #if DEBUG
                     print("world map uncompressed size \(data?.count ?? 0) -> compressed \(compressedData?.count ?? 0)")
+                    #endif
                     
                     let string = compressedData?.base64EncodedString(options: [])
                     mapData["worldMap"] = string ?? ""
-                    
-                    let anchors = worldMap.anchors
-                    let anchorList = NSMutableArray.init(capacity: anchors.count)
-                    for anchor in anchors {
-                        // include any anchor with a name in the list, since they've likely been
-                        // created by the web app
-                        if let anchorName = anchor.name {
-                            var anchorDict = [AnyHashable : Any]()
-                            anchorDict["name"] = anchorName
-                            anchorDict["transform"] = anchor.transform.array()
-                            anchorList.add(anchorDict)
-                        }
-                    }
-                    mapData["anchors"] = anchorList
                     mapData["center"] = dictFromVector3(worldMap.center)
                     mapData["extent"] = dictFromVector3(worldMap.extent)
                     mapData["featureCount"] = NSNumber(value: worldMap.rawFeaturePoints.points.count)
                     
-                    self.printWorldMapInfo(worldMap)
+                    self.logUnexpectedWorldMapAnchors(worldMap)
                     
                     completion(true, nil, mapData)
-                    DDLogError("saving WorldMap due to web request")
                 }
             } else {
                 if let error = error {
@@ -265,7 +252,7 @@ import Compression
             // now, let's load the world map
             let worldTrackingConfiguration = configuration as? ARWorldTrackingConfiguration
             worldTrackingConfiguration?.initialWorldMap = map
-            printWorldMapInfo(map)
+            logUnexpectedWorldMapAnchors(map)
             
             if let configuration = configuration {
                 session?.run(configuration, options: [.resetTracking, .removeExistingAnchors])
@@ -278,7 +265,6 @@ import Compression
             for anchor in map.anchors {
                 session?.add(anchor: anchor)
                 arkitGeneratedAnchorIDUserAnchorIDMap[anchor.identifier.uuidString] = anchor.name ?? ""
-                print("WorldMap loaded anchor: \(anchor.name ?? "nameless anchor")")
             }
             
             // now remove the map from the config
@@ -288,7 +274,6 @@ import Compression
             // [self setupDeviceCamera];
             
             completion?(true, nil)
-            DDLogError("using Saved WorldMap to restart session")
         } else {
             DDLogError("Cannot load World Map when using user-facing camera")
             completion?(false, "Cannot load World Map when using user-facing camera")
@@ -300,11 +285,14 @@ import Compression
     
     func getDecompressedData(_ compressed: Data) -> Data? {
         var dst_buffer_size: size_t = compressed.count * 8
+        let maxAttempts = 16
+        var attempts = 0
         
         var src_buffer = [UInt8](repeating: 0, count: compressed.count)
         compressed.copyBytes(to: &src_buffer, count: compressed.count)
         
-        while true {
+        while attempts < maxAttempts {
+            attempts += 1
             var dst_buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: dst_buffer_size)
             let decompressedSize: size_t = compression_decode_buffer(dst_buffer, dst_buffer_size, &src_buffer, compressed.count, nil, COMPRESSION_ZLIB)
             
@@ -324,15 +312,19 @@ import Compression
             free(dst_buffer)
             return decompressed
         }
+        return nil
     }
     
     func getCompressedData(_ input: Data?) -> Data? {
         var dst_buffer_size: size_t = max((input?.count ?? 0) / 8, 10)
+        let maxAttempts = 16
+        var attempts = 0
         
         var src_buffer = [UInt8](repeating: 0, count: input?.count ?? 0)
         input?.copyBytes(to: &src_buffer, count: input?.count ?? 0)
         
-        while true {
+        while attempts < maxAttempts {
+            attempts += 1
             var dst_buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: dst_buffer_size)
             let compressedSize = compression_encode_buffer(dst_buffer, dst_buffer_size, &src_buffer, (input?.count ?? 0), nil, COMPRESSION_ZLIB)
             
@@ -346,41 +338,28 @@ import Compression
             free(dst_buffer)
             return compressed
         }
+        return nil
     }
     
-    func printWorldMapInfo(_ worldMap: ARWorldMap) {
-        let anchors = worldMap.anchors
-        for anchor in anchors {
-            var anchorID: String
+    func logUnexpectedWorldMapAnchors(_ worldMap: ARWorldMap) {
+        for anchor in worldMap.anchors {
             if anchor is ARPlaneAnchor {
-                // ARKit system plane anchor; probably shouldn't happen!
-                anchorID = anchor.identifier.uuidString
-                DDLogWarn("saved WorldMap: contained PlaneAnchor")
+                DDLogWarn("WorldMap contained PlaneAnchor")
             } else if anchor is ARImageAnchor {
-                // User generated ARImageAnchor; probably shouldn't happen!
-                let imageAnchor = anchor as? ARImageAnchor
-                anchorID = imageAnchor?.referenceImage.name ?? "No name stored for this imageAnchor's referenceImage"
-                DDLogWarn("saved WorldMap: contained trackable ImageAnchor")
+                DDLogWarn("WorldMap contained ImageAnchor")
             } else if anchor is ARFaceAnchor {
-                // System generated ARFaceAnchor; probably shouldn't happen!
-                anchorID = anchor.identifier.uuidString
-                DDLogWarn("saved WorldMap: contained trackable FaceAnchor")
-            } else {
-                anchorID = anchor.name ?? "No name stored for this anchor"
+                DDLogWarn("WorldMap contained FaceAnchor")
             }
-            print("WorldMap contains anchor: \(anchorID)")
         }
-        let center: simd_float3 = worldMap.center
-        let extent: simd_float3 = worldMap.extent
-        print("Map center: \(center.x), \(center.y), \(center.z)")
-        print("Map extent: \(extent.x), \(extent.y), \(extent.z)")
     }
     
     func dict(toWorldMap worldMapDictionary: [AnyHashable : Any]) -> ARWorldMap? {
         guard let b64String = worldMapDictionary["worldMap"] as? String else { return nil }
         guard let data = Data(base64Encoded: b64String, options: .ignoreUnknownCharacters) else { return nil }
         guard let uncompressed = getDecompressedData(data) else { return nil }
+        #if DEBUG
         print("World map compressed size \(data.count) -> uncompressed \(uncompressed.count)")
+        #endif
         var obj: ARWorldMap? = nil
         do {
             obj = try NSKeyedUnarchiver.unarchivedObject(ofClass: ARWorldMap.self, from: uncompressed)
