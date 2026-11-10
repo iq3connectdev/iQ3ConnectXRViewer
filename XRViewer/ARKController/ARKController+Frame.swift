@@ -242,12 +242,12 @@ extension ARKController {
 
     private func appendFeaturePoints(from frame: ARFrame, to data: inout [AnyHashable: Any]) {
         let cap = featurePointsMaxPoints > 0 ? featurePointsMaxPoints : 1500
-        guard let cloud = frame.rawFeaturePoints, cloud.count > 0 else {
+        guard let cloud = frame.rawFeaturePoints, cloud.points.count > 0 else {
             data[WEB_AR_FEATURE_POINTS_OPTION] = [Float]()
             data[WEB_AR_FEATURE_POINT_IDS_OPTION] = [String]()
             return
         }
-        let count = cloud.count
+        let count = cloud.points.count
         let limit = min(count, cap)
         var points = [Float]()
         points.reserveCapacity(limit * 3)
