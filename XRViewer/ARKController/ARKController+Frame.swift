@@ -85,6 +85,17 @@ extension ARKController {
                 }
                 blockTimes["WEB_AR_3D_OBJECTS_OPTION"] = CFAbsoluteTimeGetCurrent() - objectsBlockStart
             }
+            if featurePointsEnabled {
+                let intervalMs = featurePointsIntervalMs > 0 ? featurePointsIntervalMs : 250
+                let elapsedMs = (frame.timestamp - featurePointsLastSentTimestamp) * 1000.0
+                let due = featurePointsLastSentTimestamp == 0
+                    || frame.timestamp < featurePointsLastSentTimestamp
+                    || elapsedMs >= intervalMs
+                if due {
+                    appendFeaturePoints(from: frame, to: &newData)
+                    featurePointsLastSentTimestamp = frame.timestamp
+                }
+            }
             if computerVisionDataEnabled && computerVisionFrameRequested {
                 let cvBlockStart = CFAbsoluteTimeGetCurrent()
                 let cameraInformation = NSMutableDictionary.init()
@@ -222,6 +233,48 @@ extension ARKController {
         }
     }
     
+    func setFeaturePointsEnabled(_ enabled: Bool, intervalMs: Double, maxPoints: Int) {
+        featurePointsEnabled = enabled
+        featurePointsIntervalMs = intervalMs > 0 ? intervalMs : 250
+        featurePointsMaxPoints = maxPoints > 0 ? maxPoints : 1500
+        featurePointsLastSentTimestamp = 0
+    }
+
+    private func appendFeaturePoints(from frame: ARFrame, to data: inout [AnyHashable: Any]) {
+        let cap = featurePointsMaxPoints > 0 ? featurePointsMaxPoints : 1500
+        guard let cloud = frame.rawFeaturePoints, cloud.count > 0 else {
+            data[WEB_AR_FEATURE_POINTS_OPTION] = [Float]()
+            data[WEB_AR_FEATURE_POINT_IDS_OPTION] = [String]()
+            return
+        }
+        let count = cloud.count
+        let limit = min(count, cap)
+        var points = [Float]()
+        points.reserveCapacity(limit * 3)
+        var ids = [String]()
+        ids.reserveCapacity(limit)
+        if count <= cap {
+            for index in 0..<count {
+                let point = cloud.points[index]
+                points.append(point.x)
+                points.append(point.y)
+                points.append(point.z)
+                ids.append(String(cloud.identifiers[index]))
+            }
+        } else {
+            for slot in 0..<cap {
+                let index = slot * count / cap
+                let point = cloud.points[index]
+                points.append(point.x)
+                points.append(point.y)
+                points.append(point.z)
+                ids.append(String(cloud.identifiers[index]))
+            }
+        }
+        data[WEB_AR_FEATURE_POINTS_OPTION] = points
+        data[WEB_AR_FEATURE_POINT_IDS_OPTION] = ids
+    }
+
     func synced(_ lock: Any, closure: () -> ()) {
         objc_sync_enter(lock)
         closure()

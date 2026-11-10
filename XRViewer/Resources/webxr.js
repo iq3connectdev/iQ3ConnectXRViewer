@@ -3992,6 +3992,7 @@ class ARKitWrapper extends EventTarget {
         this._worldMappingStatus = ARKitWrapper.WEB_AR_WORLDMAPPING_NOT_AVAILABLE;
         this._trackingState = ARKitWrapper.WEB_AR_TRACKING_STATE_NOT_AVAILABLE;
         this._worldMapRelocalizationInProgress = false;
+        this._featurePointSnapshot = null;
         this._defaultOptions = {
             location: true,
             camera: true,
@@ -4168,7 +4169,7 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _destroyDetectionImage(uid) {
-        return this._sendMessage('destroyImageAnchor', {
+        return this._sendMessage('destroyDetectionImage', {
             uid: uid
         });
     }
@@ -4202,6 +4203,13 @@ class ARKitWrapper extends EventTarget {
     _setUIOptions(options) {
         return this._sendMessage('setUIOptions', options, true, false);
     }
+    _setFeaturePointsEnabled(enabled, intervalMs, maxPoints) {
+        return this._sendMessage('setFeaturePointsEnabled', {
+            enabled: !!enabled,
+            intervalMs: intervalMs,
+            maxPoints: maxPoints
+        }, true, false);
+    }
     _onUpdate() {
         return window.webkit.messageHandlers.onUpdate.postMessage({});
     }
@@ -4230,6 +4238,24 @@ class ARKitWrapper extends EventTarget {
         }
         if (data.worldMapRelocalizationInProgress !== undefined) {
             this._worldMapRelocalizationInProgress = !!data.worldMapRelocalizationInProgress;
+        }
+        if (Array.isArray(data.featurePoints) && Array.isArray(data.featurePointIds)) {
+            const src = data.featurePoints;
+            const pointCount = Math.min((src.length / 3) | 0, data.featurePointIds.length);
+            const positions = new Float32Array(pointCount * 3);
+            const ids = new Array(pointCount);
+            for (let i = 0; i < pointCount; i++) {
+                const offset = i * 3;
+                positions[offset] = src[offset];
+                positions[offset + 1] = src[offset + 1];
+                positions[offset + 2] = src[offset + 2];
+                ids[i] = String(data.featurePointIds[i]);
+            }
+            this._featurePointSnapshot = {
+                timestamp: this._timestamp,
+                positions: positions,
+                ids: ids
+            };
         }
         if (data.newObjects.length) {
             for (let i = 0; i < data.newObjects.length; i++) {
@@ -4377,7 +4403,7 @@ class ARKitWrapper extends EventTarget {
                 this._anchors.set(element.uuid, planeObject);
                 element.object = planeObject;
             } else if (anchor) {
-                anchor.updatePlaneData(element.transform, element.plane_center, [element.plane_extent.x,element.plane_extent.y], element.plane_alignment, element.geometry, this._timestamp);
+                anchor.updatePlaneData(element.transform, element.plane_center, [element.plane_extent.x, element.plane_extent.z], element.plane_alignment, element.geometry, this._timestamp);
                 element.object = anchor;
             }
         } else {
@@ -4733,6 +4759,9 @@ class ARKitWrapper extends EventTarget {
     }
     setNumberOfTrackedImages(count) {
         return this._setNumberOfTrackedImages(count);
+    }
+    setFeaturePointsEnabled(enabled, intervalMs, maxPoints) {
+        return this._setFeaturePointsEnabled(enabled, intervalMs, maxPoints);
     }
     getWorldMap() {
         return new Promise((resolve, reject) => {
@@ -5624,6 +5653,104 @@ const installLightingEstimationExtension = () => {
         throw new Error('Not implemented');
     };
 };
+// addAnchor stores world = getPose(local, referenceSpace) * pose.
+// These helpers apply the inverse so poses and points come back in referenceSpace.
+function bridgeWorldToReferenceMatrix(session, referenceSpace) {
+    const priv = session[PRIVATE$15];
+    const localSpace = priv && priv._localSpace;
+    if (!referenceSpace || typeof referenceSpace._getSpaceRelativeTransform !== 'function') {
+        throw new TypeError('referenceSpace is required');
+    }
+    if (!localSpace) {
+        throw new Error('local reference space is not available');
+    }
+    const device = priv.device;
+    if (referenceSpace._specialType === 'viewer' || localSpace._specialType === 'viewer') {
+        if (!device || typeof device.getBasePoseMatrix !== 'function') {
+            throw new Error('viewer pose is not available');
+        }
+    }
+    if (typeof referenceSpace._onPoseUpdate === 'function') {
+        referenceSpace._onPoseUpdate(device);
+    }
+    if (typeof localSpace._onPoseUpdate === 'function') {
+        localSpace._onPoseUpdate(device);
+    }
+    if (referenceSpace === localSpace) {
+        return null;
+    }
+    const poseOfLocalInReference = referenceSpace._getSpaceRelativeTransform(localSpace);
+    if (!poseOfLocalInReference || !poseOfLocalInReference.matrix) {
+        throw new Error('referenceSpace pose is not available');
+    }
+    const inverse = create$5();
+    if (!invert$3(inverse, poseOfLocalInReference.matrix)) {
+        throw new Error('referenceSpace pose is not invertible');
+    }
+    return inverse;
+}
+function bridgeMatrixInReferenceSpace(toReference, worldMatrix) {
+    const out = new Float32Array(16);
+    if (!worldMatrix) {
+        identity$3(out);
+        return out;
+    }
+    if (!toReference) {
+        copy$5(out, worldMatrix);
+        return out;
+    }
+    multiply$5(out, toReference, worldMatrix);
+    return out;
+}
+function bridgePositionsInReferenceSpace(toReference, positions) {
+    const out = new Float32Array(positions.length);
+    if (!toReference) {
+        out.set(positions);
+        return out;
+    }
+    const point = new Float32Array(3);
+    for (let i = 0; i < positions.length; i += 3) {
+        point[0] = positions[i];
+        point[1] = positions[i + 1];
+        point[2] = positions[i + 2];
+        transformMat4$2(point, point, toReference);
+        out[i] = point[0];
+        out[i + 1] = point[1];
+        out[i + 2] = point[2];
+    }
+    return out;
+}
+function isListedUserAnchor(anchor) {
+    if (!anchor || anchor.deleted || anchor.placeholder) {
+        return false;
+    }
+    if (anchor instanceof XRMesh || anchor instanceof XRImageAnchor || anchor instanceof XRAnchorOffset) {
+        return false;
+    }
+    if (!(anchor instanceof XRAnchor)) {
+        return false;
+    }
+    return typeof anchor.uid === 'string' && anchor.uid.length > 0;
+}
+function planeCenterXYZ(center) {
+    if (!center) {
+        return { x: 0, y: 0, z: 0 };
+    }
+    return {
+        x: Number(center.x) || 0,
+        y: Number(center.y) || 0,
+        z: Number(center.z) || 0
+    };
+}
+function planeExtentXZ(extent) {
+    if (extent && typeof extent.x === 'number' && typeof extent.z === 'number') {
+        return { x: extent.x, z: extent.z };
+    }
+    return {
+        x: extent && extent.length ? (Number(extent[0]) || 0) : 0,
+        z: extent && extent.length > 1 ? (Number(extent[1]) || 0) : 0
+    };
+}
 const installNonstandardExtension = () => {
     if (window.XRSession === undefined) { return; }
     XRSession$1.prototype.nonStandard_setNumberOfTrackedImages = function setNumberOfTrackedImages(count) {
@@ -5642,7 +5769,7 @@ const installNonstandardExtension = () => {
         if (!this[PRIVATE$15].immersive) {
             throw new Error('Not implemented');
         }
-        return _arKitWrapper.createDetectionImage(uid);
+        return _arKitWrapper.destroyDetectionImage(uid);
     };
     XRSession$1.prototype.nonStandard_activateDetectionImage = function activateDetectionImage(uid) {
         if (!this[PRIVATE$15].immersive) {
@@ -5685,6 +5812,77 @@ const installNonstandardExtension = () => {
             throw new Error('Not implemented');
         }
         return _arKitWrapper._worldMapRelocalizationInProgress;
+    };
+    XRSession$1.prototype.nonStandard_getBridgeVersion = function getBridgeVersion() {
+        return 2;
+    };
+    XRSession$1.prototype.nonStandard_setFeaturePointsEnabled = function setFeaturePointsEnabled(enabled, options) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const settings = options || {};
+        let intervalMs = 250;
+        let maxPoints = 1500;
+        if (typeof settings.intervalMs === 'number' && settings.intervalMs > 0) {
+            intervalMs = settings.intervalMs;
+        }
+        if (typeof settings.maxPoints === 'number' && settings.maxPoints > 0) {
+            maxPoints = Math.floor(settings.maxPoints);
+        }
+        return _arKitWrapper.setFeaturePointsEnabled(!!enabled, intervalMs, maxPoints);
+    };
+    XRSession$1.prototype.nonStandard_getFeaturePoints = function getFeaturePoints(referenceSpace) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const snapshot = _arKitWrapper._featurePointSnapshot;
+        if (!snapshot) {
+            return null;
+        }
+        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
+        return {
+            timestamp: snapshot.timestamp,
+            positions: bridgePositionsInReferenceSpace(toReference, snapshot.positions),
+            ids: snapshot.ids.slice()
+        };
+    };
+    XRSession$1.prototype.nonStandard_getAnchors = function getAnchors(referenceSpace) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
+        const anchors = [];
+        _arKitWrapper._anchors.forEach(anchor => {
+            if (!isListedUserAnchor(anchor)) {
+                return;
+            }
+            anchors.push({
+                name: anchor.uid,
+                uuid: anchor.uid,
+                matrix: bridgeMatrixInReferenceSpace(toReference, anchor.modelMatrix)
+            });
+        });
+        return anchors;
+    };
+    XRSession$1.prototype.nonStandard_getPlanes = function getPlanes(referenceSpace) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
+        const planes = [];
+        _arKitWrapper._anchors.forEach(anchor => {
+            if (!(anchor instanceof XRPlaneMesh) || anchor.deleted) {
+                return;
+            }
+            planes.push({
+                uuid: anchor.uid,
+                matrix: bridgeMatrixInReferenceSpace(toReference, anchor.modelMatrix),
+                center: planeCenterXYZ(anchor.center),
+                extent: planeExtentXZ(anchor.extent),
+                alignment: anchor.alignment
+            });
+        });
+        return planes;
     };
 };
 if (xrPolyfill && xrPolyfill.injected && navigator.xr) {

@@ -87,6 +87,10 @@
         
         self.getWorldMapPromise = nil;
         self.setWorldMapPromise = nil;
+        self.featurePointsEnabled = NO;
+        self.featurePointsIntervalMs = 250.0;
+        self.featurePointsMaxPoints = 1500;
+        self.featurePointsLastSentTimestamp = 0;
         
         NSFileManager *filemgr = [NSFileManager defaultManager];
 

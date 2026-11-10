@@ -46,6 +46,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     @objc var onCreateDetectionImage: (([AnyHashable : Any], @escaping CreateDetectionImageCompletionBlock) -> Void)?
     @objc var onGetWorldMap: ((@escaping GetWorldMapCompletionBlock) -> Void)?
     @objc var onSetWorldMap: (([AnyHashable : Any], @escaping SetWorldMapCompletionBlock) -> Void)?
+    var onSetFeaturePointsEnabled: ((Bool, Double, Int) -> Void)?
     @objc var animator: Animator?
     @objc weak var barViewHeightAnchorConstraint: NSLayoutConstraint?
     @objc weak var webViewTopAnchorConstraint: NSLayoutConstraint?
@@ -554,6 +555,13 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                 }
                 blockSelf?.callWebMethod(setWorldMapCallback, paramJSON: responseDictionary, webCompletion: nil)
             })
+        } else if message.name == WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE {
+            let enabled = (messageBody["enabled"] as? NSNumber)?.boolValue ?? false
+            let intervalNumber = messageBody["intervalMs"] as? NSNumber
+            let maxPointsNumber = messageBody["maxPoints"] as? NSNumber
+            let intervalMs = intervalNumber?.doubleValue ?? 250
+            let maxPoints = maxPointsNumber?.intValue ?? 1500
+            onSetFeaturePointsEnabled?(enabled, intervalMs, maxPoints)
         } else if message.name == LOAD_WEBPAGE_CONTENT_FROM_URL {
            if let urlString = messageBody["url"] as? String {
                 loadURL(urlString)
@@ -834,6 +842,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         contentController?.add(self, name: WEB_AR_DESTROY_DETECTION_IMAGE_MESSAGE)
         contentController?.add(self, name: WEB_AR_GET_WORLD_MAP_MESSAGE)
         contentController?.add(self, name: WEB_AR_SET_WORLD_MAP_MESSAGE)
+        contentController?.add(self, name: WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE)
         contentController?.add(self, name: LOAD_WEBPAGE_CONTENT_FROM_URL)
         contentController?.add(self, name: WEB_AR_OPEN_NEW_TAB_MESSAGE)
     }
@@ -858,6 +867,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         contentController?.removeScriptMessageHandler(forName: WEB_AR_ACTIVATE_DETECTION_IMAGE_MESSAGE)
         contentController?.removeScriptMessageHandler(forName: WEB_AR_DEACTIVATE_DETECTION_IMAGE_MESSAGE)
         contentController?.removeScriptMessageHandler(forName: WEB_AR_DESTROY_DETECTION_IMAGE_MESSAGE)
+        contentController?.removeScriptMessageHandler(forName: WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE)
     }
 
     func appVersion() -> String? {

@@ -945,6 +945,10 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             blockSelf?.arkController?.setWorldMap(dictionary, completion: completion)
         }
 
+        webController?.onSetFeaturePointsEnabled = { enabled, intervalMs, maxPoints in
+            blockSelf?.arkController?.setFeaturePointsEnabled(enabled, intervalMs: intervalMs, maxPoints: maxPoints)
+        }
+
         webController?.onDeactivateDetectionImage = { imageName, completion in
             blockSelf?.arkController?.deactivateDetectionImage(imageName, completion: completion)
         }

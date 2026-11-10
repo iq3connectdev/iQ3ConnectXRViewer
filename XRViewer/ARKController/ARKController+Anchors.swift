@@ -289,6 +289,10 @@
         let distanceThreshold: Float = UserDefaults.standard.float(forKey: Constant.distantAnchorsDistanceKey())
         
         for anchor in currentFrame.anchors {
+            // iq3- anchors are stored in the WorldMap and must survive distance culling.
+            if let name = anchor.name, name.hasPrefix("iq3-") {
+                continue
+            }
             if anchor is ARPlaneAnchor {
                 guard let planeAnchor = anchor as? ARPlaneAnchor else { return }
                 let cameraMatrixInAnchorCoordinates: matrix_float4x4 = matrix_multiply(anchor.transform.inverse, cameraTransform)
