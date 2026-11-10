@@ -4084,23 +4084,40 @@ class ARKitWrapper extends EventTarget {
             options.ui = Object.assign(defaultUIOptions, uiOptions);
             options.geometry_arrays = true;
             XRMesh.setUseGeomArrays();
-            console.log('----INIT');
-            instance._initAR(options).then((deviceId) => {
-                instance._deviceId = deviceId;
-                instance._isInitialized = true;
-                try {
-                    instance.dispatchEvent(
-                        ARKitWrapper.INIT_EVENT,
-                        new CustomEvent(ARKitWrapper.INIT_EVENT, {
-                            source: instance
-                        })
-                    );
-                } catch(e) {
-                    console.error('INIT_EVENT event error', e);
-                }
-            });
+            if (XRVIEWER_FRAME_CONTEXT.isTop) {
+                instance._beginInit(options);
+            } else {
+                // Subframes stay dormant until the page asks for a session, so only the
+                // iframe that really wants AR talks to native (see ensureInitStarted).
+                instance._deferredInitOptions = options;
+            }
         }
         return ARKitWrapper.GLOBAL_INSTANCE;
+    }
+    _beginInit(options) {
+        if (this._initStarted) { return; }
+        this._initStarted = true;
+        this._deferredInitOptions = null;
+        console.log('----INIT');
+        this._initAR(options).then((deviceId) => {
+            this._deviceId = deviceId;
+            this._isInitialized = true;
+            try {
+                this.dispatchEvent(
+                    ARKitWrapper.INIT_EVENT,
+                    new CustomEvent(ARKitWrapper.INIT_EVENT, {
+                        source: this
+                    })
+                );
+            } catch(e) {
+                console.error('INIT_EVENT event error', e);
+            }
+        });
+    }
+    ensureInitStarted() {
+        if (!this._initStarted && this._deferredInitOptions) {
+            this._beginInit(this._deferredInitOptions);
+        }
     }
     static HasARKit() {
         return typeof window.webkit !== 'undefined';
@@ -4124,6 +4141,8 @@ class ARKitWrapper extends EventTarget {
                 };
                 extraOptions.callback = callbackName;
             }
+            // Lets native tell which document (top page or iframe) sent this message.
+            extraOptions.xrFrameToken = XRVIEWER_FRAME_TOKEN;
             let handler = window.webkit.messageHandlers[actionName];
             handler.postMessage(Object.assign({}, options, extraOptions));
             if (!callback) { resolve(); }
@@ -4211,7 +4230,7 @@ class ARKitWrapper extends EventTarget {
         }, true, false);
     }
     _onUpdate() {
-        return window.webkit.messageHandlers.onUpdate.postMessage({});
+        return window.webkit.messageHandlers.onUpdate.postMessage({ xrFrameToken: XRVIEWER_FRAME_TOKEN });
     }
     _requestComputerVisionData() {
         return this._sendMessage('requestComputerVisionData', {}, true, false);
@@ -4467,6 +4486,7 @@ class ARKitWrapper extends EventTarget {
         return null;
     }
     waitForInit() {
+        this.ensureInitStarted();
         return new Promise((resolve, reject) => {
             if (this._isInitialized) {
                 resolve();
@@ -5178,6 +5198,7 @@ class ARKitDevice extends XRDevice {
             const session = new Session(mode, enabledFeatures);
             this._sessions.set(session.id, session);
             this._activeSession = session;
+            xrviewerNotifyParentOfSession(true);
             this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
             return Promise.resolve(session.id);
         }).catch((...params) => {
@@ -5306,6 +5327,7 @@ class ARKitDevice extends XRDevice {
             }
             this._wrapperDiv.style.display = "none";
             this._activeSession = null;
+            xrviewerNotifyParentOfSession(false);
             identity$3(this._headModelMatrix);
             this._arKitWrapper.stop();
             this._domOverlayRoot = null;
@@ -5559,12 +5581,150 @@ WebXRPolyfill.prototype._patchNavigatorXR = function() {
         configurable: true,
     });
 };
+// ---------------------------------------------------------------------------
+// Frame support (XR Viewer fork)
+//
+// Native injects this script into every frame. It only activates in:
+//   - the top-level page, and
+//   - a direct child iframe whose origin matches the top page (one level only).
+// Every other frame (ads, embeds, nested or cross-origin iframes) gets nothing.
+// One frame owns the AR session at a time; native enforces that using
+// XRVIEWER_FRAME_TOKEN, which is sent with every bridge message.
+// ---------------------------------------------------------------------------
+const XRVIEWER_FRAME_CONTEXT = (() => {
+    let isTop = true;
+    try { isTop = window.top === window; } catch (e) { isTop = false; }
+    if (isTop) { return { isTop: true, eligible: true }; }
+    let eligible = false;
+    try {
+        eligible = window.parent === window.top &&
+            window.top.location.origin === window.location.origin;
+    } catch (e) {
+        eligible = false; // cross-origin parent: reading its location throws
+    }
+    return { isTop: false, eligible: eligible };
+})();
+const XRVIEWER_FRAME_TOKEN = 'xrf-' + Date.now().toString(36) + '-' +
+    Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36);
+// Value of `message` on window.postMessage payloads this script sends to the top page.
+// A non-empty string, so page code that switches on `data.message` ignores it.
+const XRVIEWER_POST_MESSAGE = '__xrviewerSubframeAR__';
+const xrviewerNotifyParentOfSession = (active) => {
+    if (XRVIEWER_FRAME_CONTEXT.isTop) { return; }
+    try {
+        const origin = window.location.origin;
+        window.parent.postMessage({
+            message: XRVIEWER_POST_MESSAGE,
+            state: active ? 'ar-start' : 'ar-end',
+            xrFrameToken: XRVIEWER_FRAME_TOKEN
+        }, (origin && origin !== 'null') ? origin : '*');
+    } catch (e) {
+        console.error('XR Viewer: could not notify the parent page', e);
+    }
+};
+// Top page only: while a child iframe owns AR, make that iframe cover the screen and
+// make everything else invisible, so the camera shows through. The rest of the page
+// stays in the DOM and keeps running (visibility, not display:none, and the iframe is
+// never moved, which would reload it). Everything is restored when AR ends.
+const installSubframeARHost = () => {
+    const IFRAME_STYLE = {
+        'position': 'fixed', 'top': '0', 'left': '0', 'right': '0', 'bottom': '0',
+        'width': '100%', 'height': '100%', 'min-width': '0', 'min-height': '0',
+        'max-width': 'none', 'max-height': 'none', 'aspect-ratio': 'auto',
+        'margin': '0', 'padding': '0', 'border': '0', 'display': 'block',
+        'z-index': '2147483647', 'visibility': 'visible', 'opacity': '1',
+        'transform': 'none', 'background-color': 'transparent'
+    };
+    const ROOT_STYLE = {
+        'visibility': 'hidden', 'background-color': 'transparent', 'background-image': 'none'
+    };
+    // Any of these on an ancestor would trap or clip a position:fixed descendant.
+    const ANCESTOR_STYLE = {
+        'transform': 'none', 'filter': 'none', 'perspective': 'none', 'contain': 'none',
+        'will-change': 'auto', 'backdrop-filter': 'none', '-webkit-backdrop-filter': 'none',
+        'clip-path': 'none', 'opacity': '1'
+    };
+    let active = null; // { iframe, saved: [[element, property, value, priority], ...] }
+
+    const apply = (element, styles, saved) => {
+        for (const property of Object.keys(styles)) {
+            saved.push([element, property,
+                element.style.getPropertyValue(property),
+                element.style.getPropertyPriority(property)]);
+            element.style.setProperty(property, styles[property], 'important');
+        }
+    };
+    const dispatch = (isActive, iframe) => {
+        try {
+            window.dispatchEvent(new CustomEvent('xrviewer-iframe-ar', {
+                detail: { active: isActive, iframe: iframe }
+            }));
+        } catch (e) {
+            console.error('XR Viewer: xrviewer-iframe-ar event error', e);
+        }
+    };
+    const restore = () => {
+        if (!active) { return; }
+        const { iframe, saved } = active;
+        active = null;
+        for (let i = saved.length - 1; i >= 0; i--) {
+            const [element, property, value, priority] = saved[i];
+            if (value) {
+                element.style.setProperty(property, value, priority);
+            } else {
+                element.style.removeProperty(property);
+            }
+        }
+        dispatch(false, iframe);
+    };
+    const expand = (iframe) => {
+        if (active && active.iframe === iframe) { return; }
+        restore();
+        const saved = [];
+        const root = document.documentElement;
+        apply(root, ROOT_STYLE, saved);
+        if (document.body) { apply(document.body, ROOT_STYLE, saved); }
+        for (let el = iframe.parentElement; el && el !== root; el = el.parentElement) {
+            apply(el, ANCESTOR_STYLE, saved);
+        }
+        apply(iframe, IFRAME_STYLE, saved);
+        active = { iframe: iframe, saved: saved };
+        dispatch(true, iframe);
+    };
+    const findIframe = (source) => {
+        if (!source) { return null; }
+        const frames = document.getElementsByTagName('iframe');
+        for (let i = 0; i < frames.length; i++) {
+            if (frames[i].contentWindow === source) { return frames[i]; }
+        }
+        return null;
+    };
+
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || typeof data !== 'object' || data.message !== XRVIEWER_POST_MESSAGE) { return; }
+        if (event.origin !== window.location.origin) { return; }
+        const iframe = findIframe(event.source);
+        if (!iframe) { return; }
+        if (data.state === 'ar-start') {
+            expand(iframe);
+        } else if (data.state === 'ar-end' && active && active.iframe === iframe) {
+            restore();
+        }
+    });
+    // Native calls this when the iframe that owned AR is gone, was replaced by another
+    // frame, or its tab was switched away, in case the iframe could not say so itself.
+    Object.defineProperty(window, '__xrviewerSubframeAREnded', {
+        value: restore, configurable: true
+    });
+};
+
 const mobileIndex =  navigator.userAgent.indexOf("Mobile/");
 const isWebXRViewer = navigator.userAgent.indexOf("WebXRViewer") !== -1 ||
             ((navigator.userAgent.indexOf("iPhone") !== -1 || navigator.userAgent.indexOf("iPad") !== -1)
                 && mobileIndex !== -1 && navigator.userAgent.indexOf("AppleWebKit") !== -1
                 && navigator.userAgent.indexOf(" ", mobileIndex) === -1);
-const xrPolyfill =  !isWebXRViewer ? null : new WebXRPolyfill(null, {
+const xrPolyfill = (!isWebXRViewer || !XRVIEWER_FRAME_CONTEXT.eligible) ? null : new WebXRPolyfill(null, {
     webvr: false,
     cardboard: false
 });
@@ -5888,6 +6048,20 @@ const installNonstandardExtension = () => {
 if (xrPolyfill && xrPolyfill.injected && navigator.xr) {
     _arKitWrapper = ARKitWrapper.GetOrCreate();
     ARKitDevice.initStyles();
+    if (XRVIEWER_FRAME_CONTEXT.isTop) {
+        installSubframeARHost();
+    } else {
+        // An iframe that is removed, reloaded or navigated while it owns AR tells
+        // native to stop; native also detects a vanished frame on its own.
+        window.addEventListener('pagehide', () => {
+            if (!_arKitWrapper || !_arKitWrapper._isWatching) { return; }
+            try {
+                window.webkit.messageHandlers.stopAR.postMessage({ xrFrameToken: XRVIEWER_FRAME_TOKEN });
+            } catch (e) {
+                console.error('XR Viewer: could not stop AR on pagehide', e);
+            }
+        });
+    }
     if(window.XRSystem) {
         XRSystem.prototype._isSessionSupported = XRSystem.prototype.isSessionSupported;
         XRSystem.prototype._requestSession = XRSystem.prototype.requestSession;

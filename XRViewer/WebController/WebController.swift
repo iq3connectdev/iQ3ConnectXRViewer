@@ -170,6 +170,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     }
 
     @objc func clean() {
+        arOwner = nil
         cleanWebContent()
 
         webView?.stopLoading()
@@ -369,8 +370,23 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         if let messageWebView = message.webView, messageWebView !== self.webView {
             return
         }
+        // Frames other than the top page may use the bridge only when they share its origin.
+        // The polyfill only activates in such frames; this enforces the same rule natively.
+        if !message.frameInfo.isMainFrame && !isSameOriginAsTopPage(message.frameInfo.securityOrigin) {
+            DDLogError("Ignoring WebXR message '\(message.name)' from a cross-origin frame")
+            return
+        }
         guard let messageBody = message.body as? [String: Any] else { return }
+        let sender = XRFrame(token: frameToken(for: messageBody, frameInfo: message.frameInfo), info: message.frameInfo)
         print(message.name)
+
+        // One AR session at a time: while a frame owns it, other frames can't drive it.
+        if WebController.ownerOnlyMessages.contains(message.name) && !isOwnerOrUnowned(sender) {
+            DDLogError("Ignoring '\(message.name)' from a frame that does not own the AR session")
+            rejectNonOwnerRequest(message.name, body: messageBody, from: sender)
+            return
+        }
+
         if message.name == WEB_AR_INIT_MESSAGE {
             let params = [
                 WEB_IOS_DEVICE_UUID_OPTION: UIDevice.current.identifierForVendor?.uuidString ?? 0,
@@ -382,10 +398,13 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
             DDLogDebug("Init AR send - \(params.debugDescription)")
             guard let name = messageBody[WEB_AR_CALLBACK_OPTION] as? String else { return }
-            callWebMethod(name, paramJSON: params, webCompletion: { param, error in
+            reply(to: sender, name, paramJSON: params, webCompletion: { param, error in
 
                 if error == nil {
                     DDLogDebug("Init AR Success")
+                    // An iframe initialises lazily, right before it requests a session. Don't let
+                    // that reset native state while another frame still owns AR.
+                    guard blockSelf?.isOwnerOrUnowned(sender) ?? false else { return }
                     guard let arRequestOption = messageBody[WEB_AR_REQUEST_OPTION] as? [String: Any] else { return }
                     guard let arUIOption = arRequestOption[WEB_AR_UI_OPTION] as? [String: Any] else { return }
                     let geometryArrays = arRequestOption[WEB_AR_GEOMETRY_ARRAYS] as? Bool ?? false
@@ -399,6 +418,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         } else if message.name == WEB_AR_LOAD_URL_MESSAGE {
             loadURL?(messageBody[WEB_AR_URL_OPTION] as? String)
         } else if message.name == WEB_AR_START_WATCH_MESSAGE {
+            claimAROwnership(for: sender)
             self.transferCallback = messageBody[WEB_AR_CALLBACK_OPTION] as? String ?? ""
 
             onWatchAR?(messageBody[WEB_AR_REQUEST_OPTION] as? [AnyHashable: Any] ?? [:])
@@ -407,12 +427,17 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             guard let transferCallback = messageBody[WEB_AR_DATA_CALLBACK_OPTION] as? String else {
                 var responseDictionary = [AnyHashable : Any]()
                 responseDictionary["error"] = "not data_callback parameter"
-                blockSelf?.callWebMethod(requestSessionCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "requestSession"))
+                blockSelf?.reply(to: sender, requestSessionCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "requestSession"))
                 return
             }
+            claimAROwnership(for: sender)
             self.transferCallback = transferCallback
             onRequestSession?(messageBody[WEB_AR_REQUEST_OPTION] as? [AnyHashable: Any] ?? [:], { permissions in
-                blockSelf?.callWebMethod(requestSessionCallback, paramJSON: permissions, webCompletion: debugCompletion(name: "onRequestSession"))
+                // No session was granted (denied or failed), so this frame doesn't own AR.
+                if (permissions?["webXRAccess"] as? Bool) != true {
+                    blockSelf?.releaseAROwnership(ifOwnedBy: sender)
+                }
+                blockSelf?.reply(to: sender, requestSessionCallback, paramJSON: permissions, webCompletion: debugCompletion(name: "onRequestSession"))
             })
         } else if message.name == WEB_AR_ON_JS_UPDATE_MESSAGE {
             sendARData(blockSelf?.onJSUpdateData?() ?? [:])
@@ -420,8 +445,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             self.transferCallback = ""
 
             onStopAR?()
+            let ownerWasSubframe = arOwner.map { !$0.isMainFrame } ?? false
+            releaseAROwnership(notifyTopPage: ownerWasSubframe)
             guard let name = messageBody[WEB_AR_CALLBACK_OPTION] as? String else { return }
-            callWebMethod(name, param: "", webCompletion: nil)
+            reply(to: sender, name, param: "", webCompletion: nil)
         } else if message.name == WEB_AR_SET_UI_MESSAGE {
             onSetUI?(messageBody)
         } else if message.name == WEB_AR_HIT_TEST_MESSAGE {
@@ -432,7 +459,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
             onHitTest?(type, x, y, { results in
                 //DDLogDebug(@"Hit test - %@", [results debugDescription]);
-                blockSelf?.callWebMethod(hitCallback, paramJSON: results, webCompletion: debugCompletion(name: "onHitTest"))
+                blockSelf?.reply(to: sender, hitCallback, paramJSON: results, webCompletion: debugCompletion(name: "onHitTest"))
             })
         } else if message.name == WEB_AR_ADD_ANCHOR_MESSAGE {
             guard let hitCallback = messageBody[WEB_AR_CALLBACK_OPTION] as? String else { return }
@@ -440,11 +467,11 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             guard let transform = messageBody[WEB_AR_TRANSFORM_OPTION] as? [AnyHashable: Any] else {
                 var responseDictionary = [AnyHashable : Any]()
                 responseDictionary["error"] = "invalid transform parameter"
-                blockSelf?.callWebMethod(hitCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onAddAnchor"))
+                blockSelf?.reply(to: sender, hitCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onAddAnchor"))
                 return
             }
             onAddAnchor?(name, transform, { results in
-                blockSelf?.callWebMethod(hitCallback, paramJSON: results, webCompletion: debugCompletion(name: "onAddAnchor"))
+                blockSelf?.reply(to: sender, hitCallback, paramJSON: results, webCompletion: debugCompletion(name: "onAddAnchor"))
             })
         } else if message.name == WEB_AR_REQUEST_CV_DATA_MESSAGE {
             onComputerVisionDataRequested?()
@@ -459,7 +486,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             let imageAnchorInfoDictionary = messageBody
             guard let createImageAnchorCallback = messageBody[WEB_AR_CALLBACK_OPTION] as? String else { return }
             onAddImageAnchor?(imageAnchorInfoDictionary, { imageAnchor in
-                blockSelf?.callWebMethod(createImageAnchorCallback, paramJSON: imageAnchor, webCompletion: nil)
+                blockSelf?.reply(to: sender, createImageAnchorCallback, paramJSON: imageAnchor, webCompletion: nil)
             })
         } else if message.name == WEB_AR_TRACKED_IMAGES_MESSAGE {
             let numberOfTrackedImages = messageBody[WEB_AR_NUMBER_OF_TRACKED_IMAGES_OPTION] as? Int ?? 0
@@ -473,7 +500,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                 if errorString != nil {
                     responseDictionary["error"] = errorString
                 }
-                blockSelf?.callWebMethod(createDetectionImageCallback, paramJSON: responseDictionary, webCompletion: nil)
+                blockSelf?.reply(to: sender, createDetectionImageCallback, paramJSON: responseDictionary, webCompletion: nil)
             })
         } else if message.name == WEB_AR_ACTIVATE_DETECTION_IMAGE_MESSAGE {
             let imageAnchorInfoDictionary = messageBody
@@ -489,7 +516,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                         responseDictionary["imageAnchor"] = anAnchor
                     }
                 }
-                blockSelf?.callWebMethod(activateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: nil)
+                blockSelf?.reply(to: sender, activateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: nil)
             })
         } else if message.name == WEB_AR_DEACTIVATE_DETECTION_IMAGE_MESSAGE {
             let imageAnchorInfoDictionary = messageBody
@@ -497,7 +524,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             guard let imageName = imageAnchorInfoDictionary[WEB_AR_DETECTION_IMAGE_NAME_OPTION] as? String else {
                 var responseDictionary = [AnyHashable : Any]()
                 responseDictionary["error"] = "invalid image name parameter"
-                blockSelf?.callWebMethod(deactivateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDeactivateImage"))
+                blockSelf?.reply(to: sender, deactivateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDeactivateImage"))
                 return
             }
 
@@ -507,7 +534,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                 if errorString != nil {
                     responseDictionary["error"] = errorString ?? ""
                 }
-                blockSelf?.callWebMethod(deactivateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDeactivateImage"))
+                blockSelf?.reply(to: sender, deactivateDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDeactivateImage"))
             })
         } else if message.name == WEB_AR_DESTROY_DETECTION_IMAGE_MESSAGE {
             let imageAnchorInfoDictionary = messageBody
@@ -515,7 +542,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
             guard let imageName = imageAnchorInfoDictionary[WEB_AR_DETECTION_IMAGE_NAME_OPTION] as? String else {
                 var responseDictionary = [AnyHashable : Any]()
                 responseDictionary["error"] = "invalid image name parameter"
-                blockSelf?.callWebMethod(destroyDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDestroyDetectionImage"))
+                blockSelf?.reply(to: sender, destroyDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDestroyDetectionImage"))
                 return
             }
             onDestroyDetectionImage?(imageName, { success, errorString in
@@ -524,7 +551,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                 if errorString != nil {
                     responseDictionary["error"] = errorString ?? ""
                 }
-                blockSelf?.callWebMethod(destroyDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDestroyDetectionImage"))
+                blockSelf?.reply(to: sender, destroyDetectionImageCallback, paramJSON: responseDictionary, webCompletion: debugCompletion(name: "onDestroyDetectionImage"))
             })
         } else if message.name == WEB_AR_GET_WORLD_MAP_MESSAGE {
             guard let getWorldMapCallback = messageBody[WEB_AR_CALLBACK_OPTION] as? String else { return }
@@ -539,7 +566,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                         responseDictionary["worldMap"] = aMap
                     }
                 }
-                blockSelf?.callWebMethod(getWorldMapCallback, paramJSON: responseDictionary, webCompletion: nil)
+                blockSelf?.reply(to: sender, getWorldMapCallback, paramJSON: responseDictionary, webCompletion: nil)
             })
         } else if message.name == WEB_AR_SET_WORLD_MAP_MESSAGE {
             let worldMapInfoDictionary = messageBody
@@ -553,7 +580,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
                 if errorString != nil {
                     responseDictionary["error"] = errorString ?? ""
                 }
-                blockSelf?.callWebMethod(setWorldMapCallback, paramJSON: responseDictionary, webCompletion: nil)
+                blockSelf?.reply(to: sender, setWorldMapCallback, paramJSON: responseDictionary, webCompletion: nil)
             })
         } else if message.name == WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE {
             let enabled = (messageBody["enabled"] as? NSNumber)?.boolValue ?? false
@@ -576,20 +603,44 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
     }
 
+    // MARK: Calling into the page
+
+    // Events, AR data and anything else native pushes on its own go to the frame that owns
+    // the AR session, or to the top page when no frame owns it (the pre-iframe behaviour).
+    // Replies to a request go to the frame that sent it: see reply(to:...).
+
     func callWebMethod(_ name: String, param: String?, webCompletion completion: WebCompletion?) {
-        let jsonData = param != nil ? try? JSONSerialization.data(withJSONObject: [param], options: []) : Data()
-        callWebMethod(name, jsonData: jsonData, webCompletion: completion)
+        callWebMethod(name, jsonData: WebController.jsonData(param: param), target: arOwner, webCompletion: completion)
     }
 
     func callWebMethod(_ name: String, paramJSON: Any?, webCompletion completion: WebCompletion?) {
-        var jsonData: Data? = nil
-        if let aJSON = paramJSON {
-            jsonData = paramJSON != nil ? try? JSONSerialization.data(withJSONObject: aJSON, options: []) : Data()
-        }
-        callWebMethod(name, jsonData: jsonData, webCompletion: completion)
+        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON), target: arOwner, webCompletion: completion)
     }
 
     func callWebMethod(_ name: String?, jsonData: Data?, webCompletion completion: WebCompletion?) {
+        callWebMethod(name, jsonData: jsonData, target: arOwner, webCompletion: completion)
+    }
+
+    private func reply(to sender: XRFrame, _ name: String, param: String?, webCompletion completion: WebCompletion?) {
+        callWebMethod(name, jsonData: WebController.jsonData(param: param), target: sender, webCompletion: completion)
+    }
+
+    private func reply(to sender: XRFrame, _ name: String, paramJSON: Any?, webCompletion completion: WebCompletion?) {
+        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON), target: sender, webCompletion: completion)
+    }
+
+    private static func jsonData(param: String?) -> Data? {
+        return param != nil ? try? JSONSerialization.data(withJSONObject: [param], options: []) : Data()
+    }
+
+    private static func jsonData(paramJSON: Any?) -> Data? {
+        guard let aJSON = paramJSON else { return nil }
+        return try? JSONSerialization.data(withJSONObject: aJSON, options: [])
+    }
+
+    /// Runs `name(json)` in `target`'s frame, or in the top page when `target` is nil or is
+    /// the top page. The top-page path is exactly the call used before frame support.
+    private func callWebMethod(_ name: String?, jsonData: Data?, target: XRFrame?, webCompletion completion: WebCompletion?) {
         assert(name != nil, " Web Massage name is nil !")
 
         var jsString: String? = nil
@@ -598,7 +649,155 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         }
         let jsScript = "\(name ?? "")(\(jsString ?? ""))"
 
-        webView?.evaluateJavaScript(jsScript, completionHandler: completion)
+        guard let webView = webView else { return }
+        guard let target = target, !target.isMainFrame else {
+            webView.evaluateJavaScript(jsScript, completionHandler: completion)
+            return
+        }
+        // A WKFrameInfo belongs to the web view it came from; after a tab switch it is stale.
+        guard target.info.webView === webView else {
+            arOwnerFrameWentAway(token: target.token)
+            return
+        }
+        let token = target.token
+        // ";0" makes the script's result a plain number, so the Result-based API never has to
+        // bridge an undefined or unsupported value.
+        webView.evaluateJavaScript(jsScript + ";0", in: target.info, in: .page) { [weak self] result in
+            switch result {
+            case .success(let value):
+                completion?(value, nil)
+            case .failure(let error):
+                let nsError = error as NSError
+                if nsError.domain == WKError.errorDomain,
+                   nsError.code == WKError.Code.javaScriptInvalidFrameTarget.rawValue {
+                    // The iframe was removed or replaced while it owned AR.
+                    self?.arOwnerFrameWentAway(token: token)
+                }
+                completion?(nil, error)
+            }
+        }
+    }
+
+    // MARK: WebXR frame ownership
+
+    /// Key the polyfill adds to every bridge message to say which document sent it. WebKit
+    /// hands out a new WKFrameInfo object with each message, so those can't be compared.
+    private static let frameTokenOption = "xrFrameToken"
+
+    /// Messages that act on the running AR session. While one frame owns AR, these are
+    /// refused from every other frame.
+    private static let ownerOnlyMessages: Set<String> = [
+        WEB_AR_STOP_WATCH_MESSAGE,
+        WEB_AR_ON_JS_UPDATE_MESSAGE,
+        WEB_AR_SET_UI_MESSAGE,
+        WEB_AR_HIT_TEST_MESSAGE,
+        WEB_AR_ADD_ANCHOR_MESSAGE,
+        WEB_AR_REMOVE_ANCHORS_MESSAGE,
+        WEB_AR_REQUEST_CV_DATA_MESSAGE,
+        WEB_AR_START_SENDING_CV_DATA_MESSAGE,
+        WEB_AR_STOP_SENDING_CV_DATA_MESSAGE,
+        WEB_AR_ADD_IMAGE_ANCHOR_MESSAGE,
+        WEB_AR_TRACKED_IMAGES_MESSAGE,
+        WEB_AR_CREATE_IMAGE_ANCHOR_MESSAGE,
+        WEB_AR_ACTIVATE_DETECTION_IMAGE_MESSAGE,
+        WEB_AR_DEACTIVATE_DETECTION_IMAGE_MESSAGE,
+        WEB_AR_DESTROY_DETECTION_IMAGE_MESSAGE,
+        WEB_AR_GET_WORLD_MAP_MESSAGE,
+        WEB_AR_SET_WORLD_MAP_MESSAGE,
+        WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE,
+    ]
+
+    /// One document talking to the WebXR bridge: the top page or a same-origin child iframe.
+    private struct XRFrame {
+        let token: String
+        let info: WKFrameInfo
+        var isMainFrame: Bool { return info.isMainFrame }
+    }
+
+    /// The frame in the active tab that owns the AR session. AR data and native events go
+    /// only to this frame. nil = nobody owns AR, so everything goes to the top page.
+    private var arOwner: XRFrame?
+
+    private func frameToken(for body: [String: Any], frameInfo: WKFrameInfo) -> String {
+        if let token = body[WebController.frameTokenOption] as? String, !token.isEmpty {
+            return token
+        }
+        return frameInfo.isMainFrame ? "main-frame" : "unknown-subframe"
+    }
+
+    private func isOwnerOrUnowned(_ frame: XRFrame) -> Bool {
+        guard let owner = arOwner else { return true }
+        return owner.token == frame.token
+    }
+
+    /// `frame` asked for an AR session. If another frame owns AR, end that frame's session
+    /// first (it gets userStoppedAR, like a tab switch), then hand ownership over.
+    private func claimAROwnership(for frame: XRFrame) {
+        if let owner = arOwner, owner.token != frame.token {
+            DDLogDebug("AR session moves to another frame; ending the previous frame's session")
+            callWebMethod(WEB_AR_IOS_USERSTOPPED_AR, jsonData: WebController.jsonData(param: ""), target: owner, webCompletion: nil)
+            if !owner.isMainFrame {
+                notifyTopPageSubframeAREnded()
+            }
+        }
+        arOwner = frame
+    }
+
+    private func releaseAROwnership(notifyTopPage: Bool) {
+        arOwner = nil
+        if notifyTopPage {
+            notifyTopPageSubframeAREnded()
+        }
+    }
+
+    private func releaseAROwnership(ifOwnedBy frame: XRFrame) {
+        guard let owner = arOwner, owner.token == frame.token else { return }
+        releaseAROwnership(notifyTopPage: false)
+    }
+
+    /// The owner frame no longer exists (removed, reloaded, or its tab was swapped out).
+    /// End AR natively so the app doesn't stay in a transparent full-screen state.
+    private func arOwnerFrameWentAway(token: String) {
+        guard let owner = arOwner, owner.token == token else { return }
+        DDLogError("The frame that owned the AR session is gone; ending AR")
+        transferCallback = ""
+        releaseAROwnership(notifyTopPage: !owner.isMainFrame)
+        onStopAR?()
+    }
+
+    /// Asks the top page's polyfill to undo the full-screen iframe layout. Safe to call
+    /// more than once, and a no-op when no iframe is expanded.
+    private func notifyTopPageSubframeAREnded() {
+        webView?.evaluateJavaScript("window.__xrviewerSubframeAREnded && window.__xrviewerSubframeAREnded(); 0", completionHandler: nil)
+    }
+
+    private func rejectNonOwnerRequest(_ name: String, body: [String: Any], from sender: XRFrame) {
+        guard let callback = body[WEB_AR_CALLBACK_OPTION] as? String else { return }
+        if name == WEB_AR_STOP_WATCH_MESSAGE {
+            // Nothing to stop for this frame; settle its promise.
+            reply(to: sender, callback, param: "", webCompletion: nil)
+        } else if name == WEB_AR_HIT_TEST_MESSAGE {
+            reply(to: sender, callback, paramJSON: [Any](), webCompletion: nil)
+        } else {
+            reply(to: sender, callback, paramJSON: ["error": "Another frame owns the AR session"], webCompletion: nil)
+        }
+    }
+
+    private func isSameOriginAsTopPage(_ origin: WKSecurityOrigin) -> Bool {
+        guard let url = webView?.url,
+              let scheme = url.scheme?.lowercased(),
+              let host = url.host?.lowercased() else { return false }
+        return origin.protocol.lowercased() == scheme
+            && origin.host.lowercased() == host
+            && WebController.effectivePort(origin.port, scheme: scheme) == WebController.effectivePort(url.port ?? 0, scheme: scheme)
+    }
+
+    /// Treats a scheme's default port the same as "no port" (WKSecurityOrigin reports 0).
+    private static func effectivePort(_ port: Int, scheme: String) -> Int {
+        if (scheme == "https" && port == 443) || (scheme == "http" && port == 80) {
+            return 0
+        }
+        return port
     }
 
     // MARK: WKUIDelegate, WKNavigationDelegate
@@ -606,6 +805,9 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
         
         guard webView === self.webView else { return }
+
+        // The top page is navigating away, so every frame in it goes too.
+        arOwner = nil
 
         startObservingProgress(on: webView)
         documentReadyState = ""
@@ -868,6 +1070,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         contentController?.removeScriptMessageHandler(forName: WEB_AR_DEACTIVATE_DETECTION_IMAGE_MESSAGE)
         contentController?.removeScriptMessageHandler(forName: WEB_AR_DESTROY_DETECTION_IMAGE_MESSAGE)
         contentController?.removeScriptMessageHandler(forName: WEB_AR_SET_FEATURE_POINTS_ENABLED_MESSAGE)
+        contentController?.removeScriptMessageHandler(forName: WEB_AR_GET_WORLD_MAP_MESSAGE)
+        contentController?.removeScriptMessageHandler(forName: WEB_AR_SET_WORLD_MAP_MESSAGE)
+        contentController?.removeScriptMessageHandler(forName: LOAD_WEBPAGE_CONTENT_FROM_URL)
+        contentController?.removeScriptMessageHandler(forName: WEB_AR_OPEN_NEW_TAB_MESSAGE)
     }
 
     func appVersion() -> String? {
@@ -907,7 +1113,10 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
 
             print(String(format: "size of webxr.js: %ld", scriptContent?.count ?? 0))
 
-            let userScript = WKUserScript(source: scriptContent ?? "", injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            // Injected into every frame so a same-origin iframe (e.g. the Training Editor's
+            // player) can use WebXR. The script itself stays inert in any frame that is not
+            // the top page or a same-origin direct child of it.
+            let userScript = WKUserScript(source: scriptContent ?? "", injectionTime: .atDocumentStart, forMainFrameOnly: false)
 
             contentController.addUserScript(userScript)
         }
@@ -1021,6 +1230,9 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     /// attach the new one, and sync the URL bar to it. Called on tab switch.
     func switchToWebView(_ webView: WKWebView) {
            guard webView !== self.webView else { return }
+           // AR ownership belongs to the outgoing tab. If an iframe there owned it, put that
+           // page's layout back before it goes to the background.
+           releaseAROwnership(notifyTopPage: arOwner.map { !$0.isMainFrame } ?? false)
            detachWebView()
            attachWebView(webView)
 
