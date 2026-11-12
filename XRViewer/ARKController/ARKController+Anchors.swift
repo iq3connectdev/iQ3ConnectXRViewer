@@ -5,13 +5,13 @@
     func updateDictionary(for updatedAnchor: ARAnchor) {
         let anchorID = self.anchorID(for: updatedAnchor)
         guard let anchorDictionary = objects[anchorID] as? NSMutableDictionary else { return }
-        anchorDictionary[WEB_AR_TRANSFORM_OPTION] = updatedAnchor.transform.array()
+        // ARKit can briefly report a NaN/Infinity transform while tracking is poor. Keep the last
+        // good one; the stored dictionary is resent every frame until the anchor updates again.
+        if updatedAnchor.transform.isFinite {
+            anchorDictionary[WEB_AR_TRANSFORM_OPTION] = updatedAnchor.transform.array()
+        }
 
-        if updatedAnchor is ARPlaneAnchor {
-            // ARKit system plane anchor
-            guard let updatedPlaneAnchor = updatedAnchor as? ARPlaneAnchor else { return }
-            updatePlaneAnchorData(updatedPlaneAnchor, toDictionary: anchorDictionary)
-        } else if updatedAnchor is ARImageAnchor {
+        if updatedAnchor is ARImageAnchor {
             // User generated ARImageAnchor, do nothing more than updating the transform
             return
         } else if updatedAnchor is ARFaceAnchor {
@@ -28,14 +28,12 @@
         let anchorDictionary = NSMutableDictionary.init()
         anchorDictionary[WEB_AR_TRANSFORM_OPTION] = addedAnchor.transform.array()
         anchorDictionary[WEB_AR_MUST_SEND_OPTION] = shouldSend(addedAnchor) ? NSNumber(value: true) : NSNumber(value: false)
-        
+
         if addedAnchor is ARPlaneAnchor {
-            // ARKit system plane anchor
-            guard let addedPlaneAnchor = addedAnchor as? ARPlaneAnchor else { return anchorDictionary }
-            addPlaneAnchorData(addedPlaneAnchor, toDictionary: anchorDictionary)
+            // Planes are not sent to JS and callers skip them. If one gets here anyway, keep it
+            // typed as a plane (no geometry) so JS ignores it instead of listing it as a user anchor.
             anchorDictionary[WEB_AR_UUID_OPTION] = addedAnchor.identifier.uuidString
             anchorDictionary[WEB_AR_ANCHOR_TYPE] = "plane"
-            DDLogDebug("Add Plane Anchor - \(addedAnchor.identifier.uuidString)")
         } else if addedAnchor is ARImageAnchor {
             // User generated ARImageAnchor
             let addedImageAnchor = addedAnchor as? ARImageAnchor
@@ -50,9 +48,8 @@
             anchorDictionary[WEB_AR_ANCHOR_TYPE] = "face"
         } else {
             // Simple, user generated ARAnchor
-            let userAnchorID = arkitGeneratedAnchorIDUserAnchorIDMap?[addedAnchor.identifier.uuidString] as? String
-            let name = userAnchorID != nil ? userAnchorID : addedAnchor.identifier.uuidString
-            anchorDictionary[WEB_AR_UUID_OPTION] = name ?? ""
+            let name = userAnchorName(for: addedAnchor)
+            anchorDictionary[WEB_AR_UUID_OPTION] = name
             anchorDictionary[WEB_AR_ANCHOR_TYPE] = "anchor"
             DDLogDebug("Add User Anchor - \(String(describing: name))")
         }
@@ -186,79 +183,6 @@
         blendShapesArray[48] = blendShapes[ARFaceAnchor.BlendShapeLocation.mouthUpperUpRight] ?? 0
         blendShapesArray[49] = blendShapes[ARFaceAnchor.BlendShapeLocation.noseSneerLeft] ?? 0
         blendShapesArray[50] = blendShapes[ARFaceAnchor.BlendShapeLocation.noseSneerRight] ?? 0
-    }
-    
-    // MARK: - Plane Anchors
-    
-    func updatePlaneGeometryData(_ planeGeometry: ARPlaneGeometry, toDictionary planeGeometryDictionary: NSMutableDictionary) {
-        
-        planeGeometryDictionary["vertexCount"] = NSNumber(value: planeGeometry.vertices.count)
-        let vertices = NSMutableArray.init(capacity: planeGeometry.vertices.count)
-        for i in 0..<planeGeometry.vertices.count {
-            if geometryArrays {
-                vertices.add(planeGeometry.vertices[i].x)
-                vertices.add(planeGeometry.vertices[i].y)
-                vertices.add(planeGeometry.vertices[i].z)
-            } else {
-                vertices.add(planeGeometry.vertices[i].dictionary())
-            }
-        }
-        planeGeometryDictionary["vertices"] = vertices
-        
-        let textureCoordinates = NSMutableArray.init(capacity: planeGeometry.textureCoordinates.count)
-        planeGeometryDictionary["textureCoordinateCount"] = NSNumber(value: planeGeometry.textureCoordinates.count)
-        for i in 0..<planeGeometry.textureCoordinates.count {
-            if geometryArrays {
-                textureCoordinates.add(planeGeometry.textureCoordinates[i].x)
-                textureCoordinates.add(planeGeometry.textureCoordinates[i].y)
-            } else {
-                textureCoordinates.add(planeGeometry.textureCoordinates[i].dictionary())
-            }
-        }
-        planeGeometryDictionary["textureCoordinates"] = textureCoordinates
-        
-        planeGeometryDictionary["triangleCount"] = NSNumber(value: planeGeometry.triangleCount)
-        let triangleIndices = NSMutableArray.init(capacity: planeGeometry.triangleCount * 3)
-        for i in 0..<planeGeometry.triangleCount * 3 {
-            triangleIndices.add(NSNumber(value: planeGeometry.triangleIndices[i]))
-        }
-        planeGeometryDictionary["triangleIndices"] = triangleIndices
-        
-        planeGeometryDictionary["boundaryVertexCount"] = NSNumber(value: planeGeometry.boundaryVertices.count)
-        let boundaryVertices = NSMutableArray.init(capacity: planeGeometry.boundaryVertices.count)
-        for i in 0..<planeGeometry.boundaryVertices.count {
-            if geometryArrays {
-                boundaryVertices.add(planeGeometry.boundaryVertices[i].x)
-                boundaryVertices.add(planeGeometry.boundaryVertices[i].y)
-                boundaryVertices.add(planeGeometry.boundaryVertices[i].z)
-            } else {
-                boundaryVertices.add(planeGeometry.boundaryVertices[i].dictionary())
-            }
-        }
-        planeGeometryDictionary["boundaryVertices"] = boundaryVertices
-    }
-    
-    func addGeometryData(_ planeGeometry: ARPlaneGeometry, toDictionary dictionary: NSMutableDictionary) {
-        let geometryDictionary = NSMutableDictionary.init()
-        updatePlaneGeometryData(planeGeometry, toDictionary: geometryDictionary)
-        dictionary[WEB_AR_GEOMETRY_OPTION] = geometryDictionary
-    }
-    
-    func addPlaneAnchorData(_ planeAnchor: ARPlaneAnchor, toDictionary dictionary: NSMutableDictionary) {
-        dictionary[WEB_AR_PLANE_CENTER_OPTION] = planeAnchor.center.dictionary()
-        let extentVector = vector_float3(planeAnchor.planeExtent.width, 0, planeAnchor.planeExtent.height)
-        dictionary[WEB_AR_PLANE_EXTENT_OPTION] = extentVector.dictionary()
-        dictionary[WEB_AR_PLANE_ALIGNMENT_OPTION] = planeAnchor.alignment.rawValue
-        addGeometryData(planeAnchor.geometry, toDictionary: dictionary)
-    }
-    
-    func updatePlaneAnchorData(_ planeAnchor: ARPlaneAnchor, toDictionary planeAnchorDictionary: NSMutableDictionary) {
-        planeAnchorDictionary[WEB_AR_PLANE_CENTER_OPTION] = planeAnchor.center.dictionary()
-        let extentVector = vector_float3(planeAnchor.planeExtent.width, 0, planeAnchor.planeExtent.height)
-        planeAnchorDictionary[WEB_AR_PLANE_EXTENT_OPTION] = extentVector.dictionary()
-        planeAnchorDictionary[WEB_AR_PLANE_ALIGNMENT_OPTION] = planeAnchor.alignment.rawValue
-        guard let geometry = planeAnchorDictionary[WEB_AR_GEOMETRY_OPTION] as? NSMutableDictionary else { return }
-        updatePlaneGeometryData(planeAnchor.geometry, toDictionary: geometry)
     }
     
     // MARK: - Anchor Removal
@@ -431,19 +355,23 @@
             anchorID = anchor.identifier.uuidString
         } else {
             // Simple, user generated ARAnchor
-            let userAnchorID = arkitGeneratedAnchorIDUserAnchorIDMap?[anchor.identifier.uuidString] as? String
-            //        NSString *anchorName = anchor.name;
-            //        NSString *name;
-            //        if (userAnchorID) {
-            //            name = userAnchorID;
-            //        } else {
-            //            name = [anchor.identifier UUIDString];
-            //        }
-            let name = userAnchorID != nil ? userAnchorID! : anchor.identifier.uuidString
-            anchorID = name
+            anchorID = userAnchorName(for: anchor)
         }
-        
+
         return anchorID
+    }
+
+    /// The id JS uses for a user anchor: the name recorded when it was added, else the ARKit
+    /// identifier. iq3- anchors also carry their name on the ARAnchor (it is saved in the
+    /// ARWorldMap), so they keep it even if the identifier → name entry was lost.
+    func userAnchorName(for anchor: ARAnchor) -> String {
+        if let mapped = arkitGeneratedAnchorIDUserAnchorIDMap?[anchor.identifier.uuidString] as? String {
+            return mapped
+        }
+        if let name = anchor.name, name.hasPrefix("iq3-") {
+            return name
+        }
+        return anchor.identifier.uuidString
     }
 
     /**
@@ -482,12 +410,8 @@
     func shouldSend(_ anchor: ARAnchor) -> Bool {
         var shouldSend: Bool
         if anchor is ARPlaneAnchor {
-            // ARKit system plane anchor
-            #if SEND_PLANES_BY_DEFAULT
-            shouldSend = true
-            #else
+            // Plane anchors stay in ARKit for hit testing; they are never sent to JS.
             shouldSend = false
-            #endif
         } else if anchor is ARImageAnchor {
             // User generated ARImageAnchor
             shouldSend = false
@@ -500,16 +424,5 @@
         }
         
         return shouldSend
-    }
-    
-    func anyPlaneAnchor(_ anchorArray: [ARAnchor]) -> Bool {
-        var anyPlaneAnchor = false
-        for anchor: ARAnchor in anchorArray {
-            if anchor is ARPlaneAnchor {
-                anyPlaneAnchor = true
-                break
-            }
-        }
-        return anyPlaneAnchor
     }
 }

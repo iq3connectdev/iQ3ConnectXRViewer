@@ -3019,96 +3019,6 @@ class XRLightProbe {
     }
 }
 
-class XRPlaneMesh extends XRMesh {
-    constructor(transform, center, extent, alignment, geometry, uid=null, timestamp=0) {
-        super(transform, null, uid, timestamp);
-        this._center = center;
-        this._extent = extent;
-        this._alignment = alignment;
-        this._planeFeatureChanged = true;
-        this._yAxis = fromValues$7(0,1,0, 0);
-        this._normal = create$7();
-        this._boundaryVerticesChanged = true;
-        this._boundaryVertices = [];
-        this._geometry = geometry;
-        this._updateGeometry(this._geometry);
-    }
-    get changed () { return super.changed || this._planeFeatureChanged }
-    clearChanged() {
-        super.clearChanged();
-        this._planeFeatureChanged = false;
-    }
-    updatePlaneData(transform, center, extent, alignment, geometry, timestamp) {
-        super.updateModelMatrix(transform, timestamp);
-        if (!equals$8(this._center, center) || !equals$8(this._extent, extent) ||
-             this._alignment) {
-            this._center = center;
-            this._extent = extent;
-            this._alignment = alignment;
-            this._planeFeatureChanged = true;
-        }
-        this._updateGeometry(geometry);
-    }
-    get center() { return this._center }
-    get extent() { return this._extent }
-    get alignment() { return this._alignment }
-    get boundaryVertices () { return this._boundaryVertices }
-    get boundaryVerticesChanged () { return this._boundaryVerticesChanged }
-    get boundaryVertexCount () { return this._boundaryVertices.length }
-    _updateGeometry(geometry) {
-        super._updateGeometry(geometry);
-        let g = geometry;
-        const n = transformMat4$3(this._normal, this._yAxis, this._transform);
-        const nx = n[0], ny = n[1], nz = n[2];
-        let currentVertexIndex = 0;
-        if (this._boundaryVertices.length != g.boundaryVertexCount * 3) {
-            this._boundaryVerticesChanged = true;
-            this._boundaryVertices = new Float32Array( g.vertexCount * 3 );
-            this._vertexNormalsChanged = true;
-            this._vertexNormals = new Float32Array( g.vertexCount * 3 );
-        } else {
-            this._vertexNormalsChanged = (Math.abs(this._vertexNormals[0] - nx) > EPSILON$1 ||
-                    Math.abs(this._vertexNormals[1] - ny) > EPSILON$1 ||
-                    Math.abs(this._vertexNormals[2] - nz) > EPSILON$1);
-            if (this._useGeomArrays) {
-                this._vertexPositionsChanged = !XRMesh.arrayFuzzyEquals(this._boundaryVertices, g.boundaryVertices);
-            } else {
-                this._boundaryVerticesChanged = false;
-                currentVertexIndex = 0;
-                for ( var i = 0, l = g.vertexCount; i < l; i++ ) {
-                    if (Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].x) > EPSILON$1 ||
-                        Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].y) > EPSILON$1 ||
-                        Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].z) > EPSILON$1)
-                    {
-                        this._boundaryVerticesChanged = true;
-                        break
-                    }
-                }
-            }
-        }
-        if (this._boundaryVerticesChanged) {
-            if (this._useGeomArrays) {
-                this._boundaryVertices.set(g.boundaryVertices);
-            } else {
-                currentVertexIndex = 0;
-                for (let vertex of g.boundaryVertices) {
-                    this._boundaryVertices[currentVertexIndex++] = vertex.x;
-                    this._boundaryVertices[currentVertexIndex++] = vertex.y;
-                    this._boundaryVertices[currentVertexIndex++] = vertex.z;
-                }
-            }
-        }
-        if (this._vertexNormalsChanged) {
-            currentVertexIndex = 0;
-            for (var i = 0; i < g.vertexCount; i++) {
-                this._vertexNormals[currentVertexIndex++] = nx;
-                this._vertexNormals[currentVertexIndex++] = ny;
-                this._vertexNormals[currentVertexIndex++] = nz;
-            }
-        }
-    }
-}
-
 class base64 {
     static decodeLength(input)  {
         return (input.length/4) * 3;
@@ -3350,7 +3260,6 @@ var API$1 = {
     XRImageAnchor,
     XRLightProbe,
     XRMesh,
-    XRPlaneMesh,
     XRRay,
     XRVideoFrame
 };
@@ -4396,76 +4305,50 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _createOrUpdateAnchorObject(element) {
-        if (element.plane_center) {
-            const anchor = this._anchors.get(element.uuid);
-            if (!anchor || anchor.placeholder) {
-                const planeObject = new XRPlaneMesh(element.transform,
-                    element.plane_center,
-                    [element.plane_extent.x, element.plane_extent.z],
-                    element.plane_alignment,
-                    element.geometry,
-                    element.uuid, this._timestamp);
-                if (anchor) {
-                    try {
-                        anchor.dispatchEvent("replaceAnchor",
-                            new CustomEvent("replaceAnchor", {
-                                source: anchor,
-                                detail: planeObject
-                            })
-                        );
-                    } catch(e) {
-                        console.error('replaceAnchor event error', e);
-                    }
-                    console.log('replaced dummy anchor created from hit test with plane');
-                    this._anchors.delete(element.uuid);
-                }
-                this._anchors.set(element.uuid, planeObject);
-                element.object = planeObject;
-            } else if (anchor) {
-                anchor.updatePlaneData(element.transform, element.plane_center, [element.plane_extent.x, element.plane_extent.z], element.plane_alignment, element.geometry, this._timestamp);
-                element.object = anchor;
+        // Native no longer sends plane anchors. Ignore any plane payload so it can't
+        // add an undefined entry to _anchors.
+        if (element.plane_center || element.type === ARKitWrapper.ANCHOR_TYPE_PLANE) {
+            return;
+        }
+        const anchor = this._anchors.get(element.uuid);
+        if (!anchor || anchor.placeholder) {
+            let anchorObject;
+            switch (element.type) {
+                case ARKitWrapper.ANCHOR_TYPE_FACE:
+                    anchorObject = new XRFaceMesh(element.transform, element.geometry, element.blendShapes,  element.uuid, this._timestamp);
+                    break;
+                case ARKitWrapper.ANCHOR_TYPE_ANCHOR:
+                    anchorObject = new XRAnchor(element.transform, element.uuid, this._timestamp);
+                    break;
+                case ARKitWrapper.ANCHOR_TYPE_IMAGE:
+                    anchorObject = new XRImageAnchor(element.transform, element.uuid, this._timestamp);
+                    break;
             }
+            if (anchor) {
+                try {
+                    anchor.dispatchEvent("replaceAnchor",
+                        new CustomEvent("replaceAnchor", {
+                            source: anchor || mesh,
+                            detail: anchorObject
+                        })
+                    );
+                } catch(e) {
+                    console.error('replaceAnchor event error', e);
+                }
+                console.log('replaced dummy anchor created from hit test with new anchor');
+            }
+            this._anchors.set(element.uuid, anchorObject);
+            element.object = anchorObject;
         } else {
-            const anchor = this._anchors.get(element.uuid);
-            if (!anchor || anchor.placeholder) {
-                let anchorObject;
-                switch (element.type) {
-                    case ARKitWrapper.ANCHOR_TYPE_FACE:
-                        anchorObject = new XRFaceMesh(element.transform, element.geometry, element.blendShapes,  element.uuid, this._timestamp);
-                        break;
-                    case ARKitWrapper.ANCHOR_TYPE_ANCHOR:
-                        anchorObject = new XRAnchor(element.transform, element.uuid, this._timestamp);
-                        break;
-                    case ARKitWrapper.ANCHOR_TYPE_IMAGE:
-                        anchorObject = new XRImageAnchor(element.transform, element.uuid, this._timestamp);
-                        break;
-                }
-                if (anchor) {
-                    try {
-                        anchor.dispatchEvent("replaceAnchor",
-                            new CustomEvent("replaceAnchor", {
-                                source: anchor || mesh,
-                                detail: anchorObject
-                            })
-                        );
-                    } catch(e) {
-                        console.error('replaceAnchor event error', e);
-                    }
-                    console.log('replaced dummy anchor created from hit test with new anchor');
-                }
-                this._anchors.set(element.uuid, anchorObject);
-                element.object = anchorObject;
-            } else {
-                switch (element.type) {
-                    case ARKitWrapper.ANCHOR_TYPE_FACE:
-                        anchor.updateFaceData(element.transform, element.geometry, element.blendShapes, this._timestamp);
-                        break;
-                    default:
-                        anchor.updateModelMatrix(element.transform, this._timestamp);
-                        break;
-                }
-                element.object = anchor;
+            switch (element.type) {
+                case ARKitWrapper.ANCHOR_TYPE_FACE:
+                    anchor.updateFaceData(element.transform, element.geometry, element.blendShapes, this._timestamp);
+                    break;
+                default:
+                    anchor.updateModelMatrix(element.transform, this._timestamp);
+                    break;
             }
+            element.object = anchor;
         }
     }
     _adjustARKitTime(time) {
@@ -5892,25 +5775,6 @@ function isListedUserAnchor(anchor) {
     }
     return typeof anchor.uid === 'string' && anchor.uid.length > 0;
 }
-function planeCenterXYZ(center) {
-    if (!center) {
-        return { x: 0, y: 0, z: 0 };
-    }
-    return {
-        x: Number(center.x) || 0,
-        y: Number(center.y) || 0,
-        z: Number(center.z) || 0
-    };
-}
-function planeExtentXZ(extent) {
-    if (extent && typeof extent.x === 'number' && typeof extent.z === 'number') {
-        return { x: extent.x, z: extent.z };
-    }
-    return {
-        x: extent && extent.length ? (Number(extent[0]) || 0) : 0,
-        z: extent && extent.length > 1 ? (Number(extent[1]) || 0) : 0
-    };
-}
 const installNonstandardExtension = () => {
     if (window.XRSession === undefined) { return; }
     XRSession$1.prototype.nonStandard_setNumberOfTrackedImages = function setNumberOfTrackedImages(count) {
@@ -6023,26 +5887,6 @@ const installNonstandardExtension = () => {
             });
         });
         return anchors;
-    };
-    XRSession$1.prototype.nonStandard_getPlanes = function getPlanes(referenceSpace) {
-        if (!this[PRIVATE$15].immersive) {
-            throw new Error('Not implemented');
-        }
-        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
-        const planes = [];
-        _arKitWrapper._anchors.forEach(anchor => {
-            if (!(anchor instanceof XRPlaneMesh) || anchor.deleted) {
-                return;
-            }
-            planes.push({
-                uuid: anchor.uid,
-                matrix: bridgeMatrixInReferenceSpace(toReference, anchor.modelMatrix),
-                center: planeCenterXYZ(anchor.center),
-                extent: planeExtentXZ(anchor.extent),
-                alignment: anchor.alignment
-            });
-        });
-        return planes;
     };
 };
 if (xrPolyfill && xrPolyfill.injected && navigator.xr) {

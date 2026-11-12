@@ -253,9 +253,12 @@ extension ARKController {
         points.reserveCapacity(limit * 3)
         var ids = [String]()
         ids.reserveCapacity(limit)
+        // A NaN/Infinity point cannot be sent as JSON. Skip it together with its id so the two
+        // arrays stay aligned (JS reads min(points / 3, ids) entries).
         if count <= cap {
             for index in 0..<count {
                 let point = cloud.points[index]
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else { continue }
                 points.append(point.x)
                 points.append(point.y)
                 points.append(point.z)
@@ -265,6 +268,7 @@ extension ARKController {
             for slot in 0..<cap {
                 let index = slot * count / cap
                 let point = cloud.points[index]
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else { continue }
                 points.append(point.x)
                 points.append(point.y)
                 points.append(point.z)

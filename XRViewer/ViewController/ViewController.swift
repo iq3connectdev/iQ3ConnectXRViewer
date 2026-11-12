@@ -1475,21 +1475,6 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             deferredHitTest.3(array)
             self.deferredHitTest = nil
         }
-        
-        let videoCamAccess = stateController.state.aRRequest[WEB_AR_CV_INFORMATION_OPTION] as? Bool ?? false
-        let worldSensing = stateController.state.aRRequest[WEB_AR_WORLD_SENSING_DATA_OPTION] as? Bool ?? false
-        if videoCamAccess || worldSensing {
-            guard let chosenPlane = arkController?.controller.focusedPlane else { return }
-            if let anchorIdentifier = arkController?.controller.planes.someKey(forValue: chosenPlane) {
-                let allFrameAnchors = arkController?.session.currentFrame?.anchors
-                let anchor = allFrameAnchors?.filter { $0.identifier == anchorIdentifier }.first
-                if let anchor = anchor {
-                    let addedAnchorDictionary = arkController?.createDictionary(for: anchor)
-                    arkController?.addedAnchorsSinceLastFrame.add(addedAnchorDictionary ?? [:])
-                    arkController?.objects[anchor.identifier.uuidString] = addedAnchorDictionary
-                }
-            }
-        }
     }
     
     override func traitCollectionDidChange(_ previousTraitCollection: UITraitCollection?) {

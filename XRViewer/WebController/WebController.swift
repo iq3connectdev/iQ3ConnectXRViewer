@@ -614,7 +614,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     }
 
     func callWebMethod(_ name: String, paramJSON: Any?, webCompletion completion: WebCompletion?) {
-        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON), target: arOwner, webCompletion: completion)
+        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON, name: name), target: arOwner, webCompletion: completion)
     }
 
     func callWebMethod(_ name: String?, jsonData: Data?, webCompletion completion: WebCompletion?) {
@@ -626,16 +626,59 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
     }
 
     private func reply(to sender: XRFrame, _ name: String, paramJSON: Any?, webCompletion completion: WebCompletion?) {
-        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON), target: sender, webCompletion: completion)
+        callWebMethod(name, jsonData: WebController.jsonData(paramJSON: paramJSON, name: name), target: sender, webCompletion: completion)
     }
 
     private static func jsonData(param: String?) -> Data? {
         return param != nil ? try? JSONSerialization.data(withJSONObject: [param], options: []) : Data()
     }
 
-    private static func jsonData(paramJSON: Any?) -> Data? {
+    private static var invalidJSONPayloadCount = 0
+
+    /// JSONSerialization raises an Objective-C exception for NaN/Infinity numbers, non-string keys
+    /// and non-JSON types. Swift's `try?` cannot catch that exception, so it kills the app (ARKit
+    /// plane geometry with a NaN vertex did exactly that while scanning a world map).
+    /// A valid payload, the normal case, is serialized unchanged. An invalid one is cleaned with
+    /// jsonSafeValue(_:) and still sent, because per-frame AR data also carries one-shot events
+    /// (new/removed anchors) that would be lost if the frame were dropped.
+    private static func jsonData(paramJSON: Any?, name: String?) -> Data? {
         guard let aJSON = paramJSON else { return nil }
-        return try? JSONSerialization.data(withJSONObject: aJSON, options: [])
+        var payload = aJSON
+        if !JSONSerialization.isValidJSONObject(payload) {
+            invalidJSONPayloadCount += 1
+            if invalidJSONPayloadCount == 1 || invalidJSONPayloadCount % 100 == 0 {
+                DDLogError("Invalid JSON payload for \(name ?? "nil") (NaN/Infinity or non-JSON value), sending a cleaned copy. Count: \(invalidJSONPayloadCount)")
+            }
+            payload = jsonSafeValue(payload)
+            guard JSONSerialization.isValidJSONObject(payload) else {
+                DDLogError("JSON payload for \(name ?? "nil") is not a dictionary or array, not sent")
+                return nil
+            }
+        }
+        return try? JSONSerialization.data(withJSONObject: payload, options: [])
+    }
+
+    /// Returns a JSON-safe copy of `value`: NaN/Infinity become 0, dictionary keys become strings,
+    /// and values JSON cannot hold become their text description.
+    private static func jsonSafeValue(_ value: Any) -> Any {
+        switch value {
+        case is NSNull:
+            return value
+        case let string as String:
+            return string
+        case let number as NSNumber:
+            return number.doubleValue.isFinite ? number : NSNumber(value: 0)
+        case let dictionary as [AnyHashable: Any]:
+            var result = [String: Any](minimumCapacity: dictionary.count)
+            for (key, element) in dictionary {
+                result[(key.base as? String) ?? String(describing: key.base)] = jsonSafeValue(element)
+            }
+            return result
+        case let array as [Any]:
+            return array.map { jsonSafeValue($0) }
+        default:
+            return String(describing: value)
+        }
     }
 
     /// Runs `name(json)` in `target`'s frame, or in the top page when `target` is nil or is
