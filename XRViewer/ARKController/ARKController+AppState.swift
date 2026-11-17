@@ -58,6 +58,8 @@ extension ARKController {
     func runSessionResettingTrackingAndRemovingAnchors(with state: AppState) {
         updateARConfiguration(with: state)
         session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+        // Resetting tracking discards a loaded World Map, so there is nothing left to relocalize to.
+        worldMapRelocalizationInProgress = false
         // If we are removing anchors, clear the user map
         arkitGeneratedAnchorIDUserAnchorIDMap = NSMutableDictionary()
         arSessionState = .ARKSessionRunning

@@ -4082,10 +4082,11 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _removeAnchors(uids) {
-        return new Promise((resolve) => {
-            window.webkit.messageHandlers.removeAnchors.postMessage(uids);
-            resolve();
-        });
+        // An object, not a bare array: native reads every bridge message as a dictionary, and
+        // _sendMessage adds the frame token that the AR-owner check needs.
+        return this._sendMessage('removeAnchors', {
+            uids: uids
+        }, false, false);
     }
     _createDetectionImage(uid, buffer, width, height, physicalWidthInMeters) {
         return this._sendMessage('createImageAnchor', {
@@ -4551,8 +4552,10 @@ class ARKitWrapper extends EventTarget {
         return new Promise((resolve, reject) => {
             const tempAnchor = new XRAnchor(anchorInWorldMatrix, anchorUid, this._timestamp);
             this._addAnchor(tempAnchor.uid, anchorInWorldMatrix).then(detail => {
-                if (detail.error) {
-                    reject(detail.error);
+                // No uuid means native created nothing (e.g. the name is already in use). Storing
+                // tempAnchor then would list an anchor that ARKit never tracks or saves.
+                if (!detail || detail.error || !detail.uuid) {
+                    reject((detail && detail.error) || 'anchor was not created');
                     return;
                 }
                 const anchor = this._anchors.get(detail.uuid);
@@ -4572,15 +4575,18 @@ class ARKitWrapper extends EventTarget {
         });
     }
     removeAnchor(anchor) {
-        let _anchor = this._anchors.get(anchor.uid);
-        if (_anchor.placeholder) {
+        if (!anchor) { return; }
+        const _anchor = this._anchors.get(anchor.uid);
+        if (_anchor && _anchor.placeholder) {
             this._anchors.delete(anchor.uid);
             return;
         }
         if (_anchor) {
             _anchor.deleted = true;
         }
-        if (!anchor instanceof XRAnchorOffset) {
+        // An offset rides on another anchor and has no ARKit anchor of its own. Any other anchor
+        // must leave the ARKit session as well, or it is saved into the next World Map.
+        if (!(anchor instanceof XRAnchorOffset)) {
             this._removeAnchors([anchor.uid]);
         }
     }

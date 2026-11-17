@@ -480,7 +480,7 @@ class WebController: NSObject, WKUIDelegate, WKNavigationDelegate, WKScriptMessa
         } else if message.name == WEB_AR_STOP_SENDING_CV_DATA_MESSAGE {
             onStopSendingComputerVisionData?()
         } else if message.name == WEB_AR_REMOVE_ANCHORS_MESSAGE {
-            guard let anchorIDs = message.body as? [Any] else { return }
+            guard let anchorIDs = messageBody[WEB_AR_UIDS_OPTION] as? [Any] else { return }
             onRemoveObjects?(anchorIDs)
         } else if message.name == WEB_AR_ADD_IMAGE_ANCHOR {
             let imageAnchorInfoDictionary = messageBody

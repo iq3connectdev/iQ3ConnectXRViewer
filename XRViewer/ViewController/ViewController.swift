@@ -306,6 +306,11 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 
                 blockSelf?.webController?.lastXRVisitedURL = blockSelf?.webController?.webView?.url?.absoluteString ?? ""
             } else {
+                // The page left AR, so nothing is waiting for a World Map relocalization any more.
+                // If one never finished (wrong place, or the page gave up), the flag would stay set
+                // and the next session would skip its tracking reset in handleOnWatchAR, leaving it
+                // relocalizing against the old map (or paused, if the background timer fired).
+                blockSelf?.arkController?.worldMapRelocalizationInProgress = false
                 blockSelf?.stateController.setShowMode(.nothing)
                 blockSelf?.webController?.barView?.permissionLevelButton?.buttonImage = nil
                 blockSelf?.webController?.barView?.permissionLevelButton?.isEnabled = blockSelf?.arkController?.webXRAuthorizationStatus == .denied ? true : false
@@ -837,7 +842,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                     result([WEB_AR_UUID_OPTION: name ?? 0, WEB_AR_TRANSFORM_OPTION: anArray])
                 }
             } else {
-                result([:])
+                // addAnchor refuses a missing or duplicate name. Reply with an error so the page's
+                // addAnchor promise rejects; the polyfill took an empty reply as success.
+                result(["error": "Could not add anchor \"\(name ?? "")\": the name is missing or already in use"])
             }
         }
 
