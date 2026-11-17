@@ -87,6 +87,10 @@
         
         self.getWorldMapPromise = nil;
         self.setWorldMapPromise = nil;
+        self.featurePointsEnabled = NO;
+        self.featurePointsIntervalMs = 250.0;
+        self.featurePointsMaxPoints = 1500;
+        self.featurePointsLastSentTimestamp = 0;
         
         NSFileManager *filemgr = [NSFileManager defaultManager];
 
@@ -134,6 +138,10 @@
                 // make sure all the anchors are in the objects[] array, and mark them as added
                 NSArray *anchors = [[[self session] currentFrame] anchors];
                 for (ARAnchor* addedAnchor in anchors) {
+                    // Plane anchors stay in ARKit for hit testing; they are not sent to JS.
+                    if ([addedAnchor isKindOfClass:[ARPlaneAnchor class]]) {
+                        continue;
+                    }
                     if (!self.objects[[self anchorIDFor:addedAnchor]]) {
                         NSMutableDictionary *addedAnchorDictionary = [[self createDictionaryFor:addedAnchor] mutableCopy];
                         self.objects[[self anchorIDFor:addedAnchor]] = addedAnchorDictionary;

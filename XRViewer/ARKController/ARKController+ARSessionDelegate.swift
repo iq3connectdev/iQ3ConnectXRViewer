@@ -5,6 +5,14 @@ extension ARKController: ARSessionDelegate {
     // but it works for now.
     @objc(session:didUpdateFrame:)
     func session(_ session: ARSession, didUpdate frame: ARFrame) {
+        // cameraDidChangeTrackingState only fires when the tracking state changes. If tracking
+        // turned .normal while worldMappingStatus was still .limited, the flag was never cleared
+        // and JS waited until its timeout ("space not recognized"). Check every frame instead.
+        if worldMapRelocalizationInProgress
+            && frame.camera.trackingState == .normal
+            && (frame.worldMappingStatus == .extending || frame.worldMappingStatus == .mapped) {
+            worldMapRelocalizationInProgress = false
+        }
         updateARKData(with: frame)
         
         didUpdate(self)
@@ -31,7 +39,12 @@ extension ARKController: ARSessionDelegate {
                 print("Trying to add a face anchor to a session configuration that's not ARFaceTrackingConfiguration")
                 continue
             }
-            
+
+            // Plane anchors stay in ARKit (hit testing and Lite Mode use them) but are not sent to JS.
+            if addedAnchor is ARPlaneAnchor {
+                continue
+            }
+
             if shouldSend(addedAnchor)
                 || webXRAuthorizationStatus == .worldSensing
                 || webXRAuthorizationStatus == .videoCameraAccess
@@ -90,6 +103,15 @@ extension ARKController: ARSessionDelegate {
             //        BOOL mustSendAnchor = [self shouldSendAnchor: removedAnchor];
             //        if (mustSendAnchor ||
             //            self.sendingWorldSensingDataAuthorizationStatus == SendWorldSensingDataAuthorizationStateAuthorized) {
+            // Loading a world map runs the session with .removeExistingAnchors and restores the map's
+            // anchors, which keep their saved identifiers. If anchors from the scan that produced the
+            // map are still in the session, ARKit can report their removal after the restored anchor
+            // with the same identifier is already live. Removing it here dropped iq3-origin from JS
+            // and erased its name mapping, so the first load after saving never found the origin.
+            if session.currentFrame?.anchors.contains(where: { $0.identifier == removedAnchor.identifier }) ?? false {
+                DDLogDebug("Ignoring stale removal of a live anchor - \(removedAnchor.identifier.uuidString)")
+                continue
+            }
             let anchorID = self.anchorID(for: removedAnchor)
             if objects[anchorID] != nil {
                 removedAnchorsSinceLastFrame.add(anchorID)

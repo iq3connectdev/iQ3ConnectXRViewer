@@ -757,7 +757,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"COCOAPODS=1",
-					"SEND_PLANES_BY_DEFAULT=0",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/XRViewer/Resources/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";
@@ -793,7 +792,6 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"$(inherited)",
 					"COCOAPODS=1",
-					"SEND_PLANES_BY_DEFAULT=0",
 				);
 				INFOPLIST_FILE = "$(SRCROOT)/XRViewer/Resources/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "iQ3Connect XR Viewer\n\niQ3Connect XR Viewer\n\niQ3Connect XR Viewer";

@@ -16,10 +16,10 @@ extension ARKController {
             let startTime = CFAbsoluteTimeGetCurrent()
             var blockTimes: [String: TimeInterval] = [:]
             
-            // status of ARKit World Mapping
+            // status of ARKit World Mapping and camera tracking (POC / relocalization gating)
             newData[WEB_AR_WORLDMAPPING_STATUS_MESSAGE] = worldMappingState(frame: frame)
-            print("resuest value");
-            print(request);
+            newData[WEB_AR_TRACKING_STATE_MESSAGE] = trackingState(for: frame)
+            newData[WEB_AR_WORLD_MAP_RELOCALIZATION_IN_PROGRESS] = NSNumber(value: worldMapRelocalizationInProgress)
             if (request[WEB_AR_LIGHT_INTENSITY_OPTION] as? NSNumber)?.boolValue ?? false {
                 let lightBlockStart = CFAbsoluteTimeGetCurrent()
                 // Light intensity block code...
@@ -84,6 +84,17 @@ extension ARKController {
                     newData[WEB_AR_3D_NEW_OBJECTS_OPTION] = newObjects
                 }
                 blockTimes["WEB_AR_3D_OBJECTS_OPTION"] = CFAbsoluteTimeGetCurrent() - objectsBlockStart
+            }
+            if featurePointsEnabled {
+                let intervalMs = featurePointsIntervalMs > 0 ? featurePointsIntervalMs : 250
+                let elapsedMs = (frame.timestamp - featurePointsLastSentTimestamp) * 1000.0
+                let due = featurePointsLastSentTimestamp == 0
+                    || frame.timestamp < featurePointsLastSentTimestamp
+                    || elapsedMs >= intervalMs
+                if due {
+                    appendFeaturePoints(from: frame, to: &newData)
+                    featurePointsLastSentTimestamp = frame.timestamp
+                }
             }
             if computerVisionDataEnabled && computerVisionFrameRequested {
                 let cvBlockStart = CFAbsoluteTimeGetCurrent()
@@ -200,6 +211,74 @@ extension ARKController {
         }
     }
     
+    private func trackingState(for frame: ARFrame) -> NSString {
+        switch frame.camera.trackingState {
+        case .notAvailable:
+            return WEB_AR_TRACKING_STATE_NOT_AVAILABLE as NSString
+        case .normal:
+            return WEB_AR_TRACKING_STATE_NORMAL as NSString
+        case .limited(let reason):
+            switch reason {
+            case .initializing:
+                return WEB_AR_TRACKING_STATE_LIMITED_INITIALIZING as NSString
+            case .excessiveMotion:
+                return WEB_AR_TRACKING_STATE_LIMITED_MOTION as NSString
+            case .insufficientFeatures:
+                return WEB_AR_TRACKING_STATE_LIMITED_FEATURES as NSString
+            case .relocalizing:
+                return WEB_AR_TRACKING_STATE_RELOCALIZING as NSString
+            @unknown default:
+                return WEB_AR_TRACKING_STATE_LIMITED as NSString
+            }
+        }
+    }
+    
+    func setFeaturePointsEnabled(_ enabled: Bool, intervalMs: Double, maxPoints: Int) {
+        featurePointsEnabled = enabled
+        featurePointsIntervalMs = intervalMs > 0 ? intervalMs : 250
+        featurePointsMaxPoints = maxPoints > 0 ? maxPoints : 1500
+        featurePointsLastSentTimestamp = 0
+    }
+
+    private func appendFeaturePoints(from frame: ARFrame, to data: inout [AnyHashable: Any]) {
+        let cap = featurePointsMaxPoints > 0 ? featurePointsMaxPoints : 1500
+        guard let cloud = frame.rawFeaturePoints, cloud.points.count > 0 else {
+            data[WEB_AR_FEATURE_POINTS_OPTION] = [Float]()
+            data[WEB_AR_FEATURE_POINT_IDS_OPTION] = [String]()
+            return
+        }
+        let count = cloud.points.count
+        let limit = min(count, cap)
+        var points = [Float]()
+        points.reserveCapacity(limit * 3)
+        var ids = [String]()
+        ids.reserveCapacity(limit)
+        // A NaN/Infinity point cannot be sent as JSON. Skip it together with its id so the two
+        // arrays stay aligned (JS reads min(points / 3, ids) entries).
+        if count <= cap {
+            for index in 0..<count {
+                let point = cloud.points[index]
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else { continue }
+                points.append(point.x)
+                points.append(point.y)
+                points.append(point.z)
+                ids.append(String(cloud.identifiers[index]))
+            }
+        } else {
+            for slot in 0..<cap {
+                let index = slot * count / cap
+                let point = cloud.points[index]
+                guard point.x.isFinite, point.y.isFinite, point.z.isFinite else { continue }
+                points.append(point.x)
+                points.append(point.y)
+                points.append(point.z)
+                ids.append(String(cloud.identifiers[index]))
+            }
+        }
+        data[WEB_AR_FEATURE_POINTS_OPTION] = points
+        data[WEB_AR_FEATURE_POINT_IDS_OPTION] = ids
+    }
+
     func synced(_ lock: Any, closure: () -> ()) {
         objc_sync_enter(lock)
         closure()

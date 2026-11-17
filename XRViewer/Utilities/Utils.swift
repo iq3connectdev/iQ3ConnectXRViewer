@@ -70,6 +70,11 @@ extension matrix_float3x3 {
 }
 
 extension matrix_float4x4 {
+    /// False when any element is NaN or Infinity (JSON cannot hold those).
+    var isFinite: Bool {
+        return array().allSatisfy { $0.isFinite }
+    }
+
     func array() -> [Float] {
         return [
             self.columns.0.x,

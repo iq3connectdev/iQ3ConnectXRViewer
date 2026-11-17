@@ -306,6 +306,11 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 
                 blockSelf?.webController?.lastXRVisitedURL = blockSelf?.webController?.webView?.url?.absoluteString ?? ""
             } else {
+                // The page left AR, so nothing is waiting for a World Map relocalization any more.
+                // If one never finished (wrong place, or the page gave up), the flag would stay set
+                // and the next session would skip its tracking reset in handleOnWatchAR, leaving it
+                // relocalizing against the old map (or paused, if the background timer fired).
+                blockSelf?.arkController?.worldMapRelocalizationInProgress = false
                 blockSelf?.stateController.setShowMode(.nothing)
                 blockSelf?.webController?.barView?.permissionLevelButton?.buttonImage = nil
                 blockSelf?.webController?.barView?.permissionLevelButton?.isEnabled = blockSelf?.arkController?.webXRAuthorizationStatus == .denied ? true : false
@@ -412,7 +417,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                 guard let state = blockSelf?.stateController.state else { return }
                 
                 if blockSelf?.arkController?.trackingStateRelocalizing() ?? false {
-                    blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
+                    if !(blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false) {
+                        blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
+                    }
                     return
                 }
                 
@@ -421,11 +428,16 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                         print("\n\n*********\n\nARKit is in unknown state, instantiate and start a session\n\n*********")
                         blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
                     case .ARKSessionRunning:
-                        if let lastTrackingResetDate = UserDefaults.standard.object(forKey: Constant.lastResetSessionTrackingDateKey()) as? Date,
+                        if !(blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false),
+                           let lastTrackingResetDate = UserDefaults.standard.object(forKey: Constant.lastResetSessionTrackingDateKey()) as? Date,
                             Date().timeIntervalSince(lastTrackingResetDate) >= Constant.thresholdTimeInSecondsSinceLastTrackingReset() {
                             print("\n\n*********\n\nSession is running but it's been a while since last resetting tracking, resetting tracking and removing anchors now to prevent coordinate system drift\n\n*********")
                             blockSelf?.arkController?.runSessionResettingTrackingAndRemovingAnchors(with: state)
                         } else if blockSelf?.urlIsNotTheLastXRVisitedURL() ?? false {
+                            if blockSelf?.arkController?.worldMapRelocalizationInProgress ?? false {
+                                print("\n\n*********\n\nSkipping URL-change session update while World Map relocalization is in progress\n\n*********")
+                                return
+                            }
                             print("\n\n*********\n\nThis site is not the last XR site visited, and the timer hasn't expired yet. Remove distant anchors and continue with the session\n\n*********")
                             blockSelf?.arkController?.removeDistantAnchors()
                             blockSelf?.arkController?.runSession(with: state)
@@ -830,7 +842,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                     result([WEB_AR_UUID_OPTION: name ?? 0, WEB_AR_TRANSFORM_OPTION: anArray])
                 }
             } else {
-                result([:])
+                // addAnchor refuses a missing or duplicate name. Reply with an error so the page's
+                // addAnchor promise rejects; the polyfill took an empty reply as success.
+                result(["error": "Could not add anchor \"\(name ?? "")\": the name is missing or already in use"])
             }
         }
 
@@ -936,6 +950,10 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
 
         webController?.onSetWorldMap = { dictionary, completion in
             blockSelf?.arkController?.setWorldMap(dictionary, completion: completion)
+        }
+
+        webController?.onSetFeaturePointsEnabled = { enabled, intervalMs, maxPoints in
+            blockSelf?.arkController?.setFeaturePointsEnabled(enabled, intervalMs: intervalMs, maxPoints: maxPoints)
         }
 
         webController?.onDeactivateDetectionImage = { imageName, completion in
@@ -1463,21 +1481,6 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
             let array = arkController?.hitTestNormPoint(CGPoint(x: deferredHitTest.1, y: deferredHitTest.2), types: deferredHitTest.0)
             deferredHitTest.3(array)
             self.deferredHitTest = nil
-        }
-        
-        let videoCamAccess = stateController.state.aRRequest[WEB_AR_CV_INFORMATION_OPTION] as? Bool ?? false
-        let worldSensing = stateController.state.aRRequest[WEB_AR_WORLD_SENSING_DATA_OPTION] as? Bool ?? false
-        if videoCamAccess || worldSensing {
-            guard let chosenPlane = arkController?.controller.focusedPlane else { return }
-            if let anchorIdentifier = arkController?.controller.planes.someKey(forValue: chosenPlane) {
-                let allFrameAnchors = arkController?.session.currentFrame?.anchors
-                let anchor = allFrameAnchors?.filter { $0.identifier == anchorIdentifier }.first
-                if let anchor = anchor {
-                    let addedAnchorDictionary = arkController?.createDictionary(for: anchor)
-                    arkController?.addedAnchorsSinceLastFrame.add(addedAnchorDictionary ?? [:])
-                    arkController?.objects[anchor.identifier.uuidString] = addedAnchorDictionary
-                }
-            }
         }
     }
     

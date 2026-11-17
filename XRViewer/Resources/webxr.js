@@ -3019,96 +3019,6 @@ class XRLightProbe {
     }
 }
 
-class XRPlaneMesh extends XRMesh {
-    constructor(transform, center, extent, alignment, geometry, uid=null, timestamp=0) {
-        super(transform, null, uid, timestamp);
-        this._center = center;
-        this._extent = extent;
-        this._alignment = alignment;
-        this._planeFeatureChanged = true;
-        this._yAxis = fromValues$7(0,1,0, 0);
-        this._normal = create$7();
-        this._boundaryVerticesChanged = true;
-        this._boundaryVertices = [];
-        this._geometry = geometry;
-        this._updateGeometry(this._geometry);
-    }
-    get changed () { return super.changed || this._planeFeatureChanged }
-    clearChanged() {
-        super.clearChanged();
-        this._planeFeatureChanged = false;
-    }
-    updatePlaneData(transform, center, extent, alignment, geometry, timestamp) {
-        super.updateModelMatrix(transform, timestamp);
-        if (!equals$8(this._center, center) || !equals$8(this._extent, extent) ||
-             this._alignment) {
-            this._center = center;
-            this._extent = extent;
-            this._alignment = alignment;
-            this._planeFeatureChanged = true;
-        }
-        this._updateGeometry(geometry);
-    }
-    get center() { return this._center }
-    get extent() { return this._extent }
-    get alignment() { return this._alignment }
-    get boundaryVertices () { return this._boundaryVertices }
-    get boundaryVerticesChanged () { return this._boundaryVerticesChanged }
-    get boundaryVertexCount () { return this._boundaryVertices.length }
-    _updateGeometry(geometry) {
-        super._updateGeometry(geometry);
-        let g = geometry;
-        const n = transformMat4$3(this._normal, this._yAxis, this._transform);
-        const nx = n[0], ny = n[1], nz = n[2];
-        let currentVertexIndex = 0;
-        if (this._boundaryVertices.length != g.boundaryVertexCount * 3) {
-            this._boundaryVerticesChanged = true;
-            this._boundaryVertices = new Float32Array( g.vertexCount * 3 );
-            this._vertexNormalsChanged = true;
-            this._vertexNormals = new Float32Array( g.vertexCount * 3 );
-        } else {
-            this._vertexNormalsChanged = (Math.abs(this._vertexNormals[0] - nx) > EPSILON$1 ||
-                    Math.abs(this._vertexNormals[1] - ny) > EPSILON$1 ||
-                    Math.abs(this._vertexNormals[2] - nz) > EPSILON$1);
-            if (this._useGeomArrays) {
-                this._vertexPositionsChanged = !XRMesh.arrayFuzzyEquals(this._boundaryVertices, g.boundaryVertices);
-            } else {
-                this._boundaryVerticesChanged = false;
-                currentVertexIndex = 0;
-                for ( var i = 0, l = g.vertexCount; i < l; i++ ) {
-                    if (Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].x) > EPSILON$1 ||
-                        Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].y) > EPSILON$1 ||
-                        Math.abs(this._boundaryVertices[currentVertexIndex++] - g.boundaryVertices[i].z) > EPSILON$1)
-                    {
-                        this._boundaryVerticesChanged = true;
-                        break
-                    }
-                }
-            }
-        }
-        if (this._boundaryVerticesChanged) {
-            if (this._useGeomArrays) {
-                this._boundaryVertices.set(g.boundaryVertices);
-            } else {
-                currentVertexIndex = 0;
-                for (let vertex of g.boundaryVertices) {
-                    this._boundaryVertices[currentVertexIndex++] = vertex.x;
-                    this._boundaryVertices[currentVertexIndex++] = vertex.y;
-                    this._boundaryVertices[currentVertexIndex++] = vertex.z;
-                }
-            }
-        }
-        if (this._vertexNormalsChanged) {
-            currentVertexIndex = 0;
-            for (var i = 0; i < g.vertexCount; i++) {
-                this._vertexNormals[currentVertexIndex++] = nx;
-                this._vertexNormals[currentVertexIndex++] = ny;
-                this._vertexNormals[currentVertexIndex++] = nz;
-            }
-        }
-    }
-}
-
 class base64 {
     static decodeLength(input)  {
         return (input.length/4) * 3;
@@ -3350,7 +3260,6 @@ var API$1 = {
     XRImageAnchor,
     XRLightProbe,
     XRMesh,
-    XRPlaneMesh,
     XRRay,
     XRVideoFrame
 };
@@ -3990,6 +3899,9 @@ class ARKitWrapper extends EventTarget {
         this._timeOffsetComputed = false;
         this._dataBeforeNext = 0;
         this._worldMappingStatus = ARKitWrapper.WEB_AR_WORLDMAPPING_NOT_AVAILABLE;
+        this._trackingState = ARKitWrapper.WEB_AR_TRACKING_STATE_NOT_AVAILABLE;
+        this._worldMapRelocalizationInProgress = false;
+        this._featurePointSnapshot = null;
         this._defaultOptions = {
             location: true,
             camera: true,
@@ -4081,23 +3993,40 @@ class ARKitWrapper extends EventTarget {
             options.ui = Object.assign(defaultUIOptions, uiOptions);
             options.geometry_arrays = true;
             XRMesh.setUseGeomArrays();
-            console.log('----INIT');
-            instance._initAR(options).then((deviceId) => {
-                instance._deviceId = deviceId;
-                instance._isInitialized = true;
-                try {
-                    instance.dispatchEvent(
-                        ARKitWrapper.INIT_EVENT,
-                        new CustomEvent(ARKitWrapper.INIT_EVENT, {
-                            source: instance
-                        })
-                    );
-                } catch(e) {
-                    console.error('INIT_EVENT event error', e);
-                }
-            });
+            if (XRVIEWER_FRAME_CONTEXT.isTop) {
+                instance._beginInit(options);
+            } else {
+                // Subframes stay dormant until the page asks for a session, so only the
+                // iframe that really wants AR talks to native (see ensureInitStarted).
+                instance._deferredInitOptions = options;
+            }
         }
         return ARKitWrapper.GLOBAL_INSTANCE;
+    }
+    _beginInit(options) {
+        if (this._initStarted) { return; }
+        this._initStarted = true;
+        this._deferredInitOptions = null;
+        console.log('----INIT');
+        this._initAR(options).then((deviceId) => {
+            this._deviceId = deviceId;
+            this._isInitialized = true;
+            try {
+                this.dispatchEvent(
+                    ARKitWrapper.INIT_EVENT,
+                    new CustomEvent(ARKitWrapper.INIT_EVENT, {
+                        source: this
+                    })
+                );
+            } catch(e) {
+                console.error('INIT_EVENT event error', e);
+            }
+        });
+    }
+    ensureInitStarted() {
+        if (!this._initStarted && this._deferredInitOptions) {
+            this._beginInit(this._deferredInitOptions);
+        }
     }
     static HasARKit() {
         return typeof window.webkit !== 'undefined';
@@ -4121,6 +4050,8 @@ class ARKitWrapper extends EventTarget {
                 };
                 extraOptions.callback = callbackName;
             }
+            // Lets native tell which document (top page or iframe) sent this message.
+            extraOptions.xrFrameToken = XRVIEWER_FRAME_TOKEN;
             let handler = window.webkit.messageHandlers[actionName];
             handler.postMessage(Object.assign({}, options, extraOptions));
             if (!callback) { resolve(); }
@@ -4151,10 +4082,11 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _removeAnchors(uids) {
-        return new Promise((resolve) => {
-            window.webkit.messageHandlers.removeAnchors.postMessage(uids);
-            resolve();
-        });
+        // An object, not a bare array: native reads every bridge message as a dictionary, and
+        // _sendMessage adds the frame token that the AR-owner check needs.
+        return this._sendMessage('removeAnchors', {
+            uids: uids
+        }, false, false);
     }
     _createDetectionImage(uid, buffer, width, height, physicalWidthInMeters) {
         return this._sendMessage('createImageAnchor', {
@@ -4166,7 +4098,7 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _destroyDetectionImage(uid) {
-        return this._sendMessage('destroyImageAnchor', {
+        return this._sendMessage('destroyDetectionImage', {
             uid: uid
         });
     }
@@ -4200,8 +4132,15 @@ class ARKitWrapper extends EventTarget {
     _setUIOptions(options) {
         return this._sendMessage('setUIOptions', options, true, false);
     }
+    _setFeaturePointsEnabled(enabled, intervalMs, maxPoints) {
+        return this._sendMessage('setFeaturePointsEnabled', {
+            enabled: !!enabled,
+            intervalMs: intervalMs,
+            maxPoints: maxPoints
+        }, true, false);
+    }
     _onUpdate() {
-        return window.webkit.messageHandlers.onUpdate.postMessage({});
+        return window.webkit.messageHandlers.onUpdate.postMessage({ xrFrameToken: XRVIEWER_FRAME_TOKEN });
     }
     _requestComputerVisionData() {
         return this._sendMessage('requestComputerVisionData', {}, true, false);
@@ -4223,6 +4162,30 @@ class ARKitWrapper extends EventTarget {
         copy$5(this._viewMatrix, data.camera_view);
         copy$5(this._projectionMatrix, data.projection_camera);
         this._worldMappingStatus = data.worldMappingStatus;
+        if (data.trackingState) {
+            this._trackingState = data.trackingState;
+        }
+        if (data.worldMapRelocalizationInProgress !== undefined) {
+            this._worldMapRelocalizationInProgress = !!data.worldMapRelocalizationInProgress;
+        }
+        if (Array.isArray(data.featurePoints) && Array.isArray(data.featurePointIds)) {
+            const src = data.featurePoints;
+            const pointCount = Math.min((src.length / 3) | 0, data.featurePointIds.length);
+            const positions = new Float32Array(pointCount * 3);
+            const ids = new Array(pointCount);
+            for (let i = 0; i < pointCount; i++) {
+                const offset = i * 3;
+                positions[offset] = src[offset];
+                positions[offset + 1] = src[offset + 1];
+                positions[offset + 2] = src[offset + 2];
+                ids[i] = String(data.featurePointIds[i]);
+            }
+            this._featurePointSnapshot = {
+                timestamp: this._timestamp,
+                positions: positions,
+                ids: ids
+            };
+        }
         if (data.newObjects.length) {
             for (let i = 0; i < data.newObjects.length; i++) {
                 const element = data.newObjects[i];
@@ -4343,76 +4306,50 @@ class ARKitWrapper extends EventTarget {
         });
     }
     _createOrUpdateAnchorObject(element) {
-        if (element.plane_center) {
-            const anchor = this._anchors.get(element.uuid);
-            if (!anchor || anchor.placeholder) {
-                const planeObject = new XRPlaneMesh(element.transform,
-                    element.plane_center,
-                    [element.plane_extent.x, element.plane_extent.z],
-                    element.plane_alignment,
-                    element.geometry,
-                    element.uuid, this._timestamp);
-                if (anchor) {
-                    try {
-                        anchor.dispatchEvent("replaceAnchor",
-                            new CustomEvent("replaceAnchor", {
-                                source: anchor,
-                                detail: planeObject
-                            })
-                        );
-                    } catch(e) {
-                        console.error('replaceAnchor event error', e);
-                    }
-                    console.log('replaced dummy anchor created from hit test with plane');
-                    this._anchors.delete(element.uuid);
-                }
-                this._anchors.set(element.uuid, planeObject);
-                element.object = planeObject;
-            } else if (anchor) {
-                anchor.updatePlaneData(element.transform, element.plane_center, [element.plane_extent.x,element.plane_extent.y], element.plane_alignment, element.geometry, this._timestamp);
-                element.object = anchor;
+        // Native no longer sends plane anchors. Ignore any plane payload so it can't
+        // add an undefined entry to _anchors.
+        if (element.plane_center || element.type === ARKitWrapper.ANCHOR_TYPE_PLANE) {
+            return;
+        }
+        const anchor = this._anchors.get(element.uuid);
+        if (!anchor || anchor.placeholder) {
+            let anchorObject;
+            switch (element.type) {
+                case ARKitWrapper.ANCHOR_TYPE_FACE:
+                    anchorObject = new XRFaceMesh(element.transform, element.geometry, element.blendShapes,  element.uuid, this._timestamp);
+                    break;
+                case ARKitWrapper.ANCHOR_TYPE_ANCHOR:
+                    anchorObject = new XRAnchor(element.transform, element.uuid, this._timestamp);
+                    break;
+                case ARKitWrapper.ANCHOR_TYPE_IMAGE:
+                    anchorObject = new XRImageAnchor(element.transform, element.uuid, this._timestamp);
+                    break;
             }
+            if (anchor) {
+                try {
+                    anchor.dispatchEvent("replaceAnchor",
+                        new CustomEvent("replaceAnchor", {
+                            source: anchor || mesh,
+                            detail: anchorObject
+                        })
+                    );
+                } catch(e) {
+                    console.error('replaceAnchor event error', e);
+                }
+                console.log('replaced dummy anchor created from hit test with new anchor');
+            }
+            this._anchors.set(element.uuid, anchorObject);
+            element.object = anchorObject;
         } else {
-            const anchor = this._anchors.get(element.uuid);
-            if (!anchor || anchor.placeholder) {
-                let anchorObject;
-                switch (element.type) {
-                    case ARKitWrapper.ANCHOR_TYPE_FACE:
-                        anchorObject = new XRFaceMesh(element.transform, element.geometry, element.blendShapes,  element.uuid, this._timestamp);
-                        break;
-                    case ARKitWrapper.ANCHOR_TYPE_ANCHOR:
-                        anchorObject = new XRAnchor(element.transform, element.uuid, this._timestamp);
-                        break;
-                    case ARKitWrapper.ANCHOR_TYPE_IMAGE:
-                        anchorObject = new XRImageAnchor(element.transform, element.uuid, this._timestamp);
-                        break;
-                }
-                if (anchor) {
-                    try {
-                        anchor.dispatchEvent("replaceAnchor",
-                            new CustomEvent("replaceAnchor", {
-                                source: anchor || mesh,
-                                detail: anchorObject
-                            })
-                        );
-                    } catch(e) {
-                        console.error('replaceAnchor event error', e);
-                    }
-                    console.log('replaced dummy anchor created from hit test with new anchor');
-                }
-                this._anchors.set(element.uuid, anchorObject);
-                element.object = anchorObject;
-            } else {
-                switch (element.type) {
-                    case ARKitWrapper.ANCHOR_TYPE_FACE:
-                        anchor.updateFaceData(element.transform, element.geometry, element.blendShapes, this._timestamp);
-                        break;
-                    default:
-                        anchor.updateModelMatrix(element.transform, this._timestamp);
-                        break;
-                }
-                element.object = anchor;
+            switch (element.type) {
+                case ARKitWrapper.ANCHOR_TYPE_FACE:
+                    anchor.updateFaceData(element.transform, element.geometry, element.blendShapes, this._timestamp);
+                    break;
+                default:
+                    anchor.updateModelMatrix(element.transform, this._timestamp);
+                    break;
             }
+            element.object = anchor;
         }
     }
     _adjustARKitTime(time) {
@@ -4433,6 +4370,7 @@ class ARKitWrapper extends EventTarget {
         return null;
     }
     waitForInit() {
+        this.ensureInitStarted();
         return new Promise((resolve, reject) => {
             if (this._isInitialized) {
                 resolve();
@@ -4610,12 +4548,14 @@ class ARKitWrapper extends EventTarget {
     hitTest(x, y, types=ARKitWrapper.HIT_TEST_TYPE_ALL) {
         return this._hitTest(x, y, types);
     }
-    createAnchor(anchorInWorldMatrix) {
+    createAnchor(anchorInWorldMatrix, anchorUid=null) {
         return new Promise((resolve, reject) => {
-            const tempAnchor = new XRAnchor(anchorInWorldMatrix, null, this._timestamp);
+            const tempAnchor = new XRAnchor(anchorInWorldMatrix, anchorUid, this._timestamp);
             this._addAnchor(tempAnchor.uid, anchorInWorldMatrix).then(detail => {
-                if (detail.error) {
-                    reject(detail.error);
+                // No uuid means native created nothing (e.g. the name is already in use). Storing
+                // tempAnchor then would list an anchor that ARKit never tracks or saves.
+                if (!detail || detail.error || !detail.uuid) {
+                    reject((detail && detail.error) || 'anchor was not created');
                     return;
                 }
                 const anchor = this._anchors.get(detail.uuid);
@@ -4635,15 +4575,18 @@ class ARKitWrapper extends EventTarget {
         });
     }
     removeAnchor(anchor) {
-        let _anchor = this._anchors.get(anchor.uid);
-        if (_anchor.placeholder) {
+        if (!anchor) { return; }
+        const _anchor = this._anchors.get(anchor.uid);
+        if (_anchor && _anchor.placeholder) {
             this._anchors.delete(anchor.uid);
             return;
         }
         if (_anchor) {
             _anchor.deleted = true;
         }
-        if (!anchor instanceof XRAnchorOffset) {
+        // An offset rides on another anchor and has no ARKit anchor of its own. Any other anchor
+        // must leave the ARKit session as well, or it is saved into the next World Map.
+        if (!(anchor instanceof XRAnchorOffset)) {
             this._removeAnchors([anchor.uid]);
         }
     }
@@ -4725,6 +4668,9 @@ class ARKitWrapper extends EventTarget {
     }
     setNumberOfTrackedImages(count) {
         return this._setNumberOfTrackedImages(count);
+    }
+    setFeaturePointsEnabled(enabled, intervalMs, maxPoints) {
+        return this._setFeaturePointsEnabled(enabled, intervalMs, maxPoints);
     }
     getWorldMap() {
         return new Promise((resolve, reject) => {
@@ -4812,6 +4758,13 @@ ARKitWrapper.WEB_AR_WORLDMAPPING_NOT_AVAILABLE = "ar_worldmapping_not_available"
 ARKitWrapper.WEB_AR_WORLDMAPPING_LIMITED       = "ar_worldmapping_limited";
 ARKitWrapper.WEB_AR_WORLDMAPPING_EXTENDING     = "ar_worldmapping_extending";
 ARKitWrapper.WEB_AR_WORLDMAPPING_MAPPED        = "ar_worldmapping_mapped";
+ARKitWrapper.WEB_AR_TRACKING_STATE_NOT_AVAILABLE = "ar_tracking_not_available";
+ARKitWrapper.WEB_AR_TRACKING_STATE_NORMAL = "ar_tracking_normal";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED = "ar_tracking_limited";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_INITIALIZING = "ar_tracking_limited_initializing";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_MOTION = "ar_tracking_limited_excessive_motion";
+ARKitWrapper.WEB_AR_TRACKING_STATE_LIMITED_FEATURES = "ar_tracking_limited_insufficient_features";
+ARKitWrapper.WEB_AR_TRACKING_STATE_RELOCALIZING = "ar_tracking_relocalizing";
 ARKitWrapper.HIT_TEST_TYPE_FEATURE_POINT = 1;
 ARKitWrapper.HIT_TEST_TYPE_ESTIMATED_HORIZONTAL_PLANE = 2;
 ARKitWrapper.HIT_TEST_TYPE_ESTIMATED_VERTICAL_PLANE = 4;
@@ -5134,6 +5087,7 @@ class ARKitDevice extends XRDevice {
             const session = new Session(mode, enabledFeatures);
             this._sessions.set(session.id, session);
             this._activeSession = session;
+            xrviewerNotifyParentOfSession(true);
             this.dispatchEvent('@@webxr-polyfill/vr-present-start', session.id);
             return Promise.resolve(session.id);
         }).catch((...params) => {
@@ -5262,6 +5216,7 @@ class ARKitDevice extends XRDevice {
             }
             this._wrapperDiv.style.display = "none";
             this._activeSession = null;
+            xrviewerNotifyParentOfSession(false);
             identity$3(this._headModelMatrix);
             this._arKitWrapper.stop();
             this._domOverlayRoot = null;
@@ -5515,19 +5470,157 @@ WebXRPolyfill.prototype._patchNavigatorXR = function() {
         configurable: true,
     });
 };
+// ---------------------------------------------------------------------------
+// Frame support (XR Viewer fork)
+//
+// Native injects this script into every frame. It only activates in:
+//   - the top-level page, and
+//   - a direct child iframe whose origin matches the top page (one level only).
+// Every other frame (ads, embeds, nested or cross-origin iframes) gets nothing.
+// One frame owns the AR session at a time; native enforces that using
+// XRVIEWER_FRAME_TOKEN, which is sent with every bridge message.
+// ---------------------------------------------------------------------------
+const XRVIEWER_FRAME_CONTEXT = (() => {
+    let isTop = true;
+    try { isTop = window.top === window; } catch (e) { isTop = false; }
+    if (isTop) { return { isTop: true, eligible: true }; }
+    let eligible = false;
+    try {
+        eligible = window.parent === window.top &&
+            window.top.location.origin === window.location.origin;
+    } catch (e) {
+        eligible = false; // cross-origin parent: reading its location throws
+    }
+    return { isTop: false, eligible: eligible };
+})();
+const XRVIEWER_FRAME_TOKEN = 'xrf-' + Date.now().toString(36) + '-' +
+    Math.floor(Math.random() * Number.MAX_SAFE_INTEGER).toString(36);
+// Value of `message` on window.postMessage payloads this script sends to the top page.
+// A non-empty string, so page code that switches on `data.message` ignores it.
+const XRVIEWER_POST_MESSAGE = '__xrviewerSubframeAR__';
+const xrviewerNotifyParentOfSession = (active) => {
+    if (XRVIEWER_FRAME_CONTEXT.isTop) { return; }
+    try {
+        const origin = window.location.origin;
+        window.parent.postMessage({
+            message: XRVIEWER_POST_MESSAGE,
+            state: active ? 'ar-start' : 'ar-end',
+            xrFrameToken: XRVIEWER_FRAME_TOKEN
+        }, (origin && origin !== 'null') ? origin : '*');
+    } catch (e) {
+        console.error('XR Viewer: could not notify the parent page', e);
+    }
+};
+// Top page only: while a child iframe owns AR, make that iframe cover the screen and
+// make everything else invisible, so the camera shows through. The rest of the page
+// stays in the DOM and keeps running (visibility, not display:none, and the iframe is
+// never moved, which would reload it). Everything is restored when AR ends.
+const installSubframeARHost = () => {
+    const IFRAME_STYLE = {
+        'position': 'fixed', 'top': '0', 'left': '0', 'right': '0', 'bottom': '0',
+        'width': '100%', 'height': '100%', 'min-width': '0', 'min-height': '0',
+        'max-width': 'none', 'max-height': 'none', 'aspect-ratio': 'auto',
+        'margin': '0', 'padding': '0', 'border': '0', 'display': 'block',
+        'z-index': '2147483647', 'visibility': 'visible', 'opacity': '1',
+        'transform': 'none', 'background-color': 'transparent'
+    };
+    const ROOT_STYLE = {
+        'visibility': 'hidden', 'background-color': 'transparent', 'background-image': 'none'
+    };
+    // Any of these on an ancestor would trap or clip a position:fixed descendant.
+    const ANCESTOR_STYLE = {
+        'transform': 'none', 'filter': 'none', 'perspective': 'none', 'contain': 'none',
+        'will-change': 'auto', 'backdrop-filter': 'none', '-webkit-backdrop-filter': 'none',
+        'clip-path': 'none', 'opacity': '1'
+    };
+    let active = null; // { iframe, saved: [[element, property, value, priority], ...] }
+
+    const apply = (element, styles, saved) => {
+        for (const property of Object.keys(styles)) {
+            saved.push([element, property,
+                element.style.getPropertyValue(property),
+                element.style.getPropertyPriority(property)]);
+            element.style.setProperty(property, styles[property], 'important');
+        }
+    };
+    const dispatch = (isActive, iframe) => {
+        try {
+            window.dispatchEvent(new CustomEvent('xrviewer-iframe-ar', {
+                detail: { active: isActive, iframe: iframe }
+            }));
+        } catch (e) {
+            console.error('XR Viewer: xrviewer-iframe-ar event error', e);
+        }
+    };
+    const restore = () => {
+        if (!active) { return; }
+        const { iframe, saved } = active;
+        active = null;
+        for (let i = saved.length - 1; i >= 0; i--) {
+            const [element, property, value, priority] = saved[i];
+            if (value) {
+                element.style.setProperty(property, value, priority);
+            } else {
+                element.style.removeProperty(property);
+            }
+        }
+        dispatch(false, iframe);
+    };
+    const expand = (iframe) => {
+        if (active && active.iframe === iframe) { return; }
+        restore();
+        const saved = [];
+        const root = document.documentElement;
+        apply(root, ROOT_STYLE, saved);
+        if (document.body) { apply(document.body, ROOT_STYLE, saved); }
+        for (let el = iframe.parentElement; el && el !== root; el = el.parentElement) {
+            apply(el, ANCESTOR_STYLE, saved);
+        }
+        apply(iframe, IFRAME_STYLE, saved);
+        active = { iframe: iframe, saved: saved };
+        dispatch(true, iframe);
+    };
+    const findIframe = (source) => {
+        if (!source) { return null; }
+        const frames = document.getElementsByTagName('iframe');
+        for (let i = 0; i < frames.length; i++) {
+            if (frames[i].contentWindow === source) { return frames[i]; }
+        }
+        return null;
+    };
+
+    window.addEventListener('message', (event) => {
+        const data = event.data;
+        if (!data || typeof data !== 'object' || data.message !== XRVIEWER_POST_MESSAGE) { return; }
+        if (event.origin !== window.location.origin) { return; }
+        const iframe = findIframe(event.source);
+        if (!iframe) { return; }
+        if (data.state === 'ar-start') {
+            expand(iframe);
+        } else if (data.state === 'ar-end' && active && active.iframe === iframe) {
+            restore();
+        }
+    });
+    // Native calls this when the iframe that owned AR is gone, was replaced by another
+    // frame, or its tab was switched away, in case the iframe could not say so itself.
+    Object.defineProperty(window, '__xrviewerSubframeAREnded', {
+        value: restore, configurable: true
+    });
+};
+
 const mobileIndex =  navigator.userAgent.indexOf("Mobile/");
 const isWebXRViewer = navigator.userAgent.indexOf("WebXRViewer") !== -1 ||
             ((navigator.userAgent.indexOf("iPhone") !== -1 || navigator.userAgent.indexOf("iPad") !== -1)
                 && mobileIndex !== -1 && navigator.userAgent.indexOf("AppleWebKit") !== -1
                 && navigator.userAgent.indexOf(" ", mobileIndex) === -1);
-const xrPolyfill =  !isWebXRViewer ? null : new WebXRPolyfill(null, {
+const xrPolyfill = (!isWebXRViewer || !XRVIEWER_FRAME_CONTEXT.eligible) ? null : new WebXRPolyfill(null, {
     webvr: false,
     cardboard: false
 });
 let _arKitWrapper = null;
 const installAnchorsExtension = () => {
     if (window.XRFrame === undefined) { return; }
-    XRFrame.prototype.addAnchor = async function addAnchor(value, referenceSpace) {
+    XRFrame.prototype.addAnchor = async function addAnchor(value, referenceSpace, anchorName) {
         if (!this.session[PRIVATE$15].immersive) {
             return Promise.reject();
         }
@@ -5537,7 +5630,8 @@ const installAnchorsExtension = () => {
                 let localReferenceSpace = this.session[PRIVATE$15]._localSpace;
                 copy$5(_workingMatrix, this.getPose(localReferenceSpace, referenceSpace).transform.matrix);
                 const anchorInWorldMatrix = multiply$5(create$5(), _workingMatrix, value);
-                _arKitWrapper.createAnchor(anchorInWorldMatrix)
+                const name = (typeof anchorName === 'string' && anchorName.length) ? anchorName : null;
+                _arKitWrapper.createAnchor(anchorInWorldMatrix, name)
                     .then(resolve)
                     .catch((...params) => {
                         console.error('could not create anchor', ...params);
@@ -5608,6 +5702,85 @@ const installLightingEstimationExtension = () => {
         throw new Error('Not implemented');
     };
 };
+// addAnchor stores world = getPose(local, referenceSpace) * pose.
+// These helpers apply the inverse so poses and points come back in referenceSpace.
+function bridgeWorldToReferenceMatrix(session, referenceSpace) {
+    const priv = session[PRIVATE$15];
+    const localSpace = priv && priv._localSpace;
+    if (!referenceSpace || typeof referenceSpace._getSpaceRelativeTransform !== 'function') {
+        throw new TypeError('referenceSpace is required');
+    }
+    if (!localSpace) {
+        throw new Error('local reference space is not available');
+    }
+    const device = priv.device;
+    if (referenceSpace._specialType === 'viewer' || localSpace._specialType === 'viewer') {
+        if (!device || typeof device.getBasePoseMatrix !== 'function') {
+            throw new Error('viewer pose is not available');
+        }
+    }
+    if (typeof referenceSpace._onPoseUpdate === 'function') {
+        referenceSpace._onPoseUpdate(device);
+    }
+    if (typeof localSpace._onPoseUpdate === 'function') {
+        localSpace._onPoseUpdate(device);
+    }
+    if (referenceSpace === localSpace) {
+        return null;
+    }
+    const poseOfLocalInReference = referenceSpace._getSpaceRelativeTransform(localSpace);
+    if (!poseOfLocalInReference || !poseOfLocalInReference.matrix) {
+        throw new Error('referenceSpace pose is not available');
+    }
+    const inverse = create$5();
+    if (!invert$3(inverse, poseOfLocalInReference.matrix)) {
+        throw new Error('referenceSpace pose is not invertible');
+    }
+    return inverse;
+}
+function bridgeMatrixInReferenceSpace(toReference, worldMatrix) {
+    const out = new Float32Array(16);
+    if (!worldMatrix) {
+        identity$3(out);
+        return out;
+    }
+    if (!toReference) {
+        copy$5(out, worldMatrix);
+        return out;
+    }
+    multiply$5(out, toReference, worldMatrix);
+    return out;
+}
+function bridgePositionsInReferenceSpace(toReference, positions) {
+    const out = new Float32Array(positions.length);
+    if (!toReference) {
+        out.set(positions);
+        return out;
+    }
+    const point = new Float32Array(3);
+    for (let i = 0; i < positions.length; i += 3) {
+        point[0] = positions[i];
+        point[1] = positions[i + 1];
+        point[2] = positions[i + 2];
+        transformMat4$2(point, point, toReference);
+        out[i] = point[0];
+        out[i + 1] = point[1];
+        out[i + 2] = point[2];
+    }
+    return out;
+}
+function isListedUserAnchor(anchor) {
+    if (!anchor || anchor.deleted || anchor.placeholder) {
+        return false;
+    }
+    if (anchor instanceof XRMesh || anchor instanceof XRImageAnchor || anchor instanceof XRAnchorOffset) {
+        return false;
+    }
+    if (!(anchor instanceof XRAnchor)) {
+        return false;
+    }
+    return typeof anchor.uid === 'string' && anchor.uid.length > 0;
+}
 const installNonstandardExtension = () => {
     if (window.XRSession === undefined) { return; }
     XRSession$1.prototype.nonStandard_setNumberOfTrackedImages = function setNumberOfTrackedImages(count) {
@@ -5626,7 +5799,7 @@ const installNonstandardExtension = () => {
         if (!this[PRIVATE$15].immersive) {
             throw new Error('Not implemented');
         }
-        return _arKitWrapper.createDetectionImage(uid);
+        return _arKitWrapper.destroyDetectionImage(uid);
     };
     XRSession$1.prototype.nonStandard_activateDetectionImage = function activateDetectionImage(uid) {
         if (!this[PRIVATE$15].immersive) {
@@ -5658,10 +5831,87 @@ const installNonstandardExtension = () => {
         }
         return _arKitWrapper._worldMappingStatus;
     };
+    XRSession$1.prototype.nonStandard_getTrackingState = function getTrackingState() {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        return _arKitWrapper._trackingState;
+    };
+    XRSession$1.prototype.nonStandard_getWorldMapRelocalizationInProgress = function getWorldMapRelocalizationInProgress() {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        return _arKitWrapper._worldMapRelocalizationInProgress;
+    };
+    XRSession$1.prototype.nonStandard_getBridgeVersion = function getBridgeVersion() {
+        return 2;
+    };
+    XRSession$1.prototype.nonStandard_setFeaturePointsEnabled = function setFeaturePointsEnabled(enabled, options) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const settings = options || {};
+        let intervalMs = 250;
+        let maxPoints = 1500;
+        if (typeof settings.intervalMs === 'number' && settings.intervalMs > 0) {
+            intervalMs = settings.intervalMs;
+        }
+        if (typeof settings.maxPoints === 'number' && settings.maxPoints > 0) {
+            maxPoints = Math.floor(settings.maxPoints);
+        }
+        return _arKitWrapper.setFeaturePointsEnabled(!!enabled, intervalMs, maxPoints);
+    };
+    XRSession$1.prototype.nonStandard_getFeaturePoints = function getFeaturePoints(referenceSpace) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const snapshot = _arKitWrapper._featurePointSnapshot;
+        if (!snapshot) {
+            return null;
+        }
+        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
+        return {
+            timestamp: snapshot.timestamp,
+            positions: bridgePositionsInReferenceSpace(toReference, snapshot.positions),
+            ids: snapshot.ids.slice()
+        };
+    };
+    XRSession$1.prototype.nonStandard_getAnchors = function getAnchors(referenceSpace) {
+        if (!this[PRIVATE$15].immersive) {
+            throw new Error('Not implemented');
+        }
+        const toReference = bridgeWorldToReferenceMatrix(this, referenceSpace);
+        const anchors = [];
+        _arKitWrapper._anchors.forEach(anchor => {
+            if (!isListedUserAnchor(anchor)) {
+                return;
+            }
+            anchors.push({
+                name: anchor.uid,
+                uuid: anchor.uid,
+                matrix: bridgeMatrixInReferenceSpace(toReference, anchor.modelMatrix)
+            });
+        });
+        return anchors;
+    };
 };
 if (xrPolyfill && xrPolyfill.injected && navigator.xr) {
     _arKitWrapper = ARKitWrapper.GetOrCreate();
     ARKitDevice.initStyles();
+    if (XRVIEWER_FRAME_CONTEXT.isTop) {
+        installSubframeARHost();
+    } else {
+        // An iframe that is removed, reloaded or navigated while it owns AR tells
+        // native to stop; native also detects a vanished frame on its own.
+        window.addEventListener('pagehide', () => {
+            if (!_arKitWrapper || !_arKitWrapper._isWatching) { return; }
+            try {
+                window.webkit.messageHandlers.stopAR.postMessage({ xrFrameToken: XRVIEWER_FRAME_TOKEN });
+            } catch (e) {
+                console.error('XR Viewer: could not stop AR on pagehide', e);
+            }
+        });
+    }
     if(window.XRSystem) {
         XRSystem.prototype._isSessionSupported = XRSystem.prototype.isSessionSupported;
         XRSystem.prototype._requestSession = XRSystem.prototype.requestSession;
