@@ -135,6 +135,9 @@ typedef void (^ResultArrayBlock)(NSArray *);
 /// When YES, a World Map was loaded via setWorldMap and ARKit may be relocalizing; native UI must not reset tracking.
 /// Cleared when relocalization succeeds, when tracking is reset, and when the page leaves AR.
 @property(nonatomic) BOOL worldMapRelocalizationInProgress;
+/// Identifiers of image anchors removed by a World Map load. ARKit finds those images again after
+/// relocalization under the same name, so their removal is not reported to JS.
+@property(nonatomic, strong) NSMutableSet *worldMapReplacedImageAnchorIDs;
 @property (nonatomic, strong) AVCaptureDevice *device;
 @property (nonatomic, strong) id<ARKControllerProtocol> controller;
 /// The CV image being sent to JS is downscaled using the metho

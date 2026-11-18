@@ -112,6 +112,11 @@ extension ARKController: ARSessionDelegate {
                 DDLogDebug("Ignoring stale removal of a live anchor - \(removedAnchor.identifier.uuidString)")
                 continue
             }
+            // Replaced by a World Map load; see _setWorldMap.
+            if worldMapReplacedImageAnchorIDs.contains(removedAnchor.identifier.uuidString) {
+                worldMapReplacedImageAnchorIDs.remove(removedAnchor.identifier.uuidString)
+                continue
+            }
             let anchorID = self.anchorID(for: removedAnchor)
             if objects[anchorID] != nil {
                 removedAnchorsSinceLastFrame.add(anchorID)

@@ -249,6 +249,35 @@
         detectionImageActivationAfterRemovalPromises.removeAllObjects()
     }
     
+    /**
+     Called when the page leaves AR. Image detection belongs to the WebXR session that set it up, so the
+     next session starts without this session's images, activations and image anchors. A kept image
+     anchor answered the next session's activation (the polyfill kept it too), and that session's World
+     Map load then removed it, which made the page re-arm the image after relocalization.
+     */
+    func clearImageDetection() {
+        clearImageDetectionDictionaries()
+        worldMapReplacedImageAnchorIDs.removeAllObjects()
+        let imageAnchorKeys = objects.allKeys.filter { key in
+            ((objects[key] as? NSDictionary)?[WEB_AR_ANCHOR_TYPE] as? String) == "image"
+        }
+        objects.removeObjects(forKeys: imageAnchorKeys)
+        for case let imageAnchor as ARImageAnchor in session?.currentFrame?.anchors ?? [] {
+            arkitGeneratedAnchorIDUserAnchorIDMap[imageAnchor.identifier.uuidString] = nil
+            session?.remove(anchor: imageAnchor)
+        }
+        guard let worldTrackingConfiguration = configuration as? ARWorldTrackingConfiguration else { return }
+        let hasImages = !(worldTrackingConfiguration.detectionImages?.isEmpty ?? true)
+        if !hasImages && worldTrackingConfiguration.maximumNumberOfTrackedImages == 0 {
+            return
+        }
+        worldTrackingConfiguration.detectionImages = Set<ARReferenceImage>()
+        worldTrackingConfiguration.maximumNumberOfTrackedImages = 0
+        if arSessionState == .ARKSessionRunning {
+            session?.run(worldTrackingConfiguration, options: [])
+        }
+    }
+    
     // MARK: - Buffer Functions
     
     func updateBase64Buffers(from capturedImagePixelBuffer: CVPixelBuffer) {

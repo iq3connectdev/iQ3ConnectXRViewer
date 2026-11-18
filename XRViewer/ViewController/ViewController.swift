@@ -311,6 +311,9 @@ class ViewController: UIViewController, UIGestureRecognizerDelegate { /// GCDWeb
                 // and the next session would skip its tracking reset in handleOnWatchAR, leaving it
                 // relocalizing against the old map (or paused, if the background timer fired).
                 blockSelf?.arkController?.worldMapRelocalizationInProgress = false
+                blockSelf?.arkController?.clearImageDetection()
+                // updateARConfiguration applies this to later runs.
+                blockSelf?.stateController.state.numberOfTrackedImages = 0
                 blockSelf?.stateController.setShowMode(.nothing)
                 blockSelf?.webController?.barView?.permissionLevelButton?.buttonImage = nil
                 blockSelf?.webController?.barView?.permissionLevelButton?.isEnabled = blockSelf?.arkController?.webXRAuthorizationStatus == .denied ? true : false

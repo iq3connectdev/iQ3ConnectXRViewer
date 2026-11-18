@@ -4541,6 +4541,14 @@ class ARKitWrapper extends EventTarget {
     }
     _handleStopped() {
         this._isWatching = false;
+        // Native clears image detection when the page leaves AR. A kept image anchor would answer the
+        // next session's activateDetectionImage without a new sighting. No removal event: the page has
+        // left AR and must not re-arm the image.
+        this._anchors.forEach((anchor, uid) => {
+            if (anchor instanceof XRImageAnchor) {
+                this._anchors.delete(uid);
+            }
+        });
         if (this._rAF_callbacks.length > 0) {
             this._do_rAF();
         }
