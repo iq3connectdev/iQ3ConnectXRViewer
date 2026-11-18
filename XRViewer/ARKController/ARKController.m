@@ -84,6 +84,7 @@
         self.detectionImageCreationRequests = [NSMutableArray new];
         self.detectionImageCreationPromises = [NSMutableDictionary new];
         self.detectionImageActivationAfterRemovalPromises = [NSMutableDictionary new];
+        self.worldMapReplacedImageAnchorIDs = [NSMutableSet new];
         
         self.getWorldMapPromise = nil;
         self.setWorldMapPromise = nil;

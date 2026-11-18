@@ -253,6 +253,15 @@ import Compression
             let worldTrackingConfiguration = configuration as? ARWorldTrackingConfiguration
             worldTrackingConfiguration?.initialWorldMap = map
             logUnexpectedWorldMapAnchors(map)
+            // ARKit finds these images again after relocalization, under the same name. Their removal is
+            // not reported (see session(_:didRemove:)), so the page keeps its image anchor instead of
+            // re-arming the image, which re-runs the session after relocalization and moves the anchors.
+            let detectionImageNames = Set(worldTrackingConfiguration?.detectionImages?.compactMap { $0.name } ?? [])
+            for case let imageAnchor as ARImageAnchor in session?.currentFrame?.anchors ?? [] {
+                if let name = imageAnchor.referenceImage.name, detectionImageNames.contains(name) {
+                    worldMapReplacedImageAnchorIDs.add(imageAnchor.identifier.uuidString)
+                }
+            }
             
             if let configuration = configuration {
                 session?.run(configuration, options: [.resetTracking, .removeExistingAnchors])
